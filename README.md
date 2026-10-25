@@ -1,36 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FDR Intelligence Hub
 
-## Getting Started
+**Smart India Hackathon 2026 · SIH26265 — Streamline of Security Deposit / FDR Portal** (AICTE Regulation Bureau · Smart Automation · Software)
 
-First, run the development server:
+A verification-first portal for the security deposits / Fixed Deposit Receipts that technical institutions keep with AICTE for 10 years. Every field shows **who vouched for it**, renewal chains are **checked automatically**, and every lien-release NOC is **verifiable by the bank via QR**.
+
+## The problem in five lines
+
+1. A Trust opening a technical institution must keep a security deposit with AICTE for 10 years. It is either an FDR held by a bank with a lien to the Member Secretary, AICTE, or (since 2019-20) an online deposit to AICTE's account.
+2. Over a decade the FDR gets renewed, replaced and topped up. Each event creates a new instrument that needs a fresh lien, and nothing links the chain.
+3. Officers track lakhs of records across spreadsheets, email and a legacy portal. They cannot tell what an institution typed from what a bank actually confirmed.
+4. AICTE's own [Feb 2019 notice](https://aicte.gov.in/sites/default/files/Message%20for%20portal.pdf) on FDRs from 2010-11 lists three failures: banks not responding, interest not refunded, releases never applied for.
+5. They share one root cause: **no system says what each instrument needs next.**
+
+## What makes this different
+
+| # | Differentiator | Where to see it |
+|---|---|---|
+| U1 | **Three-tier provenance on every field:** *Claimed* (institution) · *Extracted* (AI, with confidence) · *Confirmed* (bank). Badges always carry a text label. | FDR Passport, officer case review |
+| U2 | **Renewal chain X-ray:** a timeline of the chain, with automatic checks for coverage gaps, amount drops and missing liens | FDR Passport → Renewal chain |
+| U3 | **Account Aggregator bank verification:** an `AAProvider` interface returning the TERM_DEPOSIT shape. The MVP uses a **Mock AA sandbox**; Setu/Finvu come in Phase 4. | "Fetch bank confirmation" |
+| U4 | **Verifiable NOC:** SHA-256 anchored at issue, QR on the letter, a public `/verify/:code` page, revocation, and a byte-level tamper check | `/noc/:code`, `/verify/:code` |
+| U5 | **APH rules + penalty engine:** versioned JSON rules (term, 15-day affidavit window, 10% / 20% late tiers, lease doubling, 10% / 50% release deductions). Every deduction shows its rule reference. | Release case → Penalty |
+| U6 | **Institution risk score:** 40·late renewals + 30·gap days/30 + 20·open discrepancies + 10·overdue cases (cap 100). The queue is sorted by it. | `/officer`, dashboard |
+| U7 | **Unclaimed matured deposits finder:** deposits past their 10-year term with no release application, plus a one-click notice draft | Dashboard |
+| U8 | **"Why is this pending?":** for every open case, the blocking step, owner, days pending, next action and evidence | Passport, case review, queue |
+
+Also included:
+
+- an append-only audit log in which each event's hash covers the previous one (re-verified on `/audit`)
+- a server-side state machine (`lib/transitions.ts`)
+- role checks on every action, and Zod on every input
+
+## Honest boundaries
+
+- **A matching hash proves a record is *unchanged*, not that a bank issued it.** Authenticity comes from the bank (Account Aggregator / bank portal). The UI and the NOC letter both say so.
+- Bank confirmation is the **Mock AA sandbox**. It reads a seeded "bank book" (`BankDepositRecord`) in the same JSON shape a real AA would return. Lien status comes from a mocked bank portal, because the AA term-deposit summary does not include liens.
+- Hashes are **anchored in the database** ("Hash anchored (DB) — ledger in Phase 3"); `LedgerAnchor.txRef` is empty until the EVM anchor lands.
+- **AI extraction never auto-accepts.** With `ANTHROPIC_API_KEY` set, Claude (`claude-opus-5-5`) reads the PDF or image into the *extracted* tier. Without a key, a local text-layer parser does the same for text PDFs and is labelled as such.
+- Sign-in is a **role switcher** with no passwords. Notifications are in-app only. The NOC is a styled HTML letter, not a PDF.
+- All institutions, banks, people and documents are **fictional**. Every generated PDF is stamped SPECIMEN. Rule amounts (e.g. ₹25 L per programme) are illustrative and live in the `RuleSet` JSON.
+
+## Demo script (5 flows, brief §5.6)
+
+Run `npm run db:seed` first. Dates are relative to the day you seed.
+
+1. **New submission.** Sign in as *Rakesh Tiwari* (Ganga Valley) and go to **Submit instrument**.
+   - Choose FDR / New deposit and enter Bharat Union Bank, `BUB2026160022`, ₹50,00,000, 2026-10-21 → 2029-10-21.
+   - Upload the specimen **"FDR ₹45 L"**. The AI reads ₹45 L; the mismatch is highlighted and you keep your claim.
+   - Confirm and submit. You land on the FDR Passport, where the case has been created.
+2. **Discrepancy identification.** Switch to *Arjun Mehta* (Regulation Bureau). The queue is sorted by risk.
+   - Open the new case: the document viewer is on the left, and Claimed ₹50 L vs Extracted ₹45 L is shown in red.
+   - Click **Fetch bank confirmation** (Mock AA). Confirmed ₹45 L is added.
+   - Request clarification (a reason is mandatory).
+3. **Renewal.** Open Shivneri's expiring FDR. The chain timeline shows the **47-day coverage gap**.
+   - Narmada's latest FDR shows the **₹50 L → ₹45 L drop**.
+   - Kaveri's latest FDR has **no lien** (claimed yes, document and bank say no).
+4. **Validity tracking / approaching maturity.** Open the **Dashboard**: expiring in ≤ 30 days, the aging chart, and the unclaimed matured list with **Draft notice**.
+   - Click **Run maturity job** (the same as `GET /api/cron/maturity`). Reminders are created; running it again creates none.
+5. **Authorized release + tamper evidence.** Open Konkan's release case. "Why pending" reports *Legal cell, 18 days, SLA breached*.
+   - Sign in as *Rohini Kulkarni* (Legal) and click **Clear**. The penalty engine applies **10%** (late affidavit, APH §1.12).
+   - Sign in as *Dr. S. Raghavan*, click **Approve release**, then **Issue lien-release NOC**.
+   - Open the NOC letter and scan or click its QR to reach `/verify/:code`, which shows **Valid**.
+   - Click **Flip one byte & re-check** to see a **hash mismatch**. A seeded revoked NOC shows as **Revoked**.
+   - *Suresh Iyer* (bank) then confirms the lien is lifted. The case closes and the instrument is *Released*.
+
+`/audit` re-verifies the whole event hash chain.
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install                      # also runs prisma generate
+npx prisma dev -n fdr -d         # local Postgres (PGlite) — or use your Neon URL
+# put the TCP URL it prints in .env as DATABASE_URL (add &pgbouncer=true&connection_limit=1 for PGlite)
+npx prisma migrate deploy
+npm run db:seed                  # ~1–2 min: 15 institutions, 45 instruments, planted defects
+npm run dev                      # http://localhost:3000
+npm test                         # engine unit tests (vitest)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment (`.env`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Needed | Purpose |
+|---|---|---|
+| `DATABASE_URL` | yes | Postgres (Neon in production) |
+| `ANTHROPIC_API_KEY` | optional | Claude vision extraction. If unset, the local text parser is used. |
+| `BLOB_READ_WRITE_TOKEN` | optional | Vercel Blob for uploads. If unset, bytes are stored in Postgres. |
+| `CRON_SECRET` | prod | Protects `/api/cron/maturity` (Vercel Cron sends it as a Bearer token) |
+| `NEXT_PUBLIC_APP_URL` | optional | Absolute URL for NOC QR codes (otherwise taken from the request host) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`npm run samples` regenerates the specimen PDFs in `public/samples/` (byte-stable).
 
-## Learn More
+## Deploy (Vercel + Neon)
 
-To learn more about Next.js, take a look at the following resources:
+1. Create a Neon project. Use the **pooled** connection string with `&pgbouncer=true` as `DATABASE_URL` in Vercel.
+2. From your machine, migrate and seed against Neon's **direct** connection string:
+   ```bash
+   DATABASE_URL="<neon direct url>" npx prisma migrate deploy
+   DATABASE_URL="<neon direct url>" npm run db:seed
+   ```
+3. Import the repo in Vercel, set the env vars above, and deploy. `vercel.json` schedules the daily maturity job.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project layout
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/                 routes (App Router) + server actions (app/actions.ts)
+  institution/       deposits list · submit wizard · FDR Passport
+  officer/           risk-sorted queue · split-screen case review
+  dashboard/         KPIs · aging · unclaimed finder · notice draft
+  noc/ verify/       NOC letter with QR · public verification + tamper check
+  bank/ audit/       bank NOC inbox · hash-chain audit trail
+  api/cron/maturity  status recompute + reminders
+lib/                 pure engines: rules, provenance, discrepancy, chain, risk, hash, transitions, whyPending, extract
+lib/services/        DB orchestration: core (sync, risk), workflow, maturity, noc
+lib/aa/              AAProvider interface + mock
+prisma/              schema, migrations, seed (the demo dataset)
+tests/               engine unit tests
+```
 
-## Deploy on Vercel
+## Roadmap
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Phase | Adds |
+|---|---|
+| P2 Auth & roles | Credentials / NextAuth; full RO, Cell and Authority workflows |
+| P3 Real ledger | Hardhat EVM: `anchor`, `issueNOC`, `revokeNOC`, `verify`; fills `txRef` |
+| P4 Account Aggregator | Setu / Finvu sandbox consent → TERM_DEPOSIT fetch; bank portal fallback; DSC on bank PDFs |
+| P5 OCR | Self-hosted PaddleOCR (EN + HI) with LLM fallback; bounding-box evidence crops |
+| P6 Notifications | Email, SMS / WhatsApp (DLT); escalation ladder |
+| P7 Documents | Affidavit-6 auto-generation, Aadhaar eSign, NOC PDF with QR |
+| P8 Migration | Legacy Excel / portal import with AI cleanup and duplicate merge |
+| P9 Ops | Fastify API, BullMQ workers, audit export, DPDP consent records |
+| P10 Metrics | Harness on seeded cases: % planted defects caught, reminder reliability, turnaround with vs without AA |
