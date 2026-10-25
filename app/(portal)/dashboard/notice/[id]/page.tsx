@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppShell, PageHeader } from "@/components/app-shell";
+import { PageHeader } from "@/components/app-shell";
 import { db } from "@/lib/db";
 import { fmtDate, formatINR } from "@/lib/format";
 import { effectiveValue, tierFieldsOf } from "@/lib/provenance";
@@ -50,9 +50,9 @@ ${user.designation ?? ""}
 Regulation Bureau, AICTE`;
 
   return (
-    <AppShell user={user}>
+    <>
       <PageHeader title="Notice draft — unclaimed matured deposit" subtitle="Review and edit before sending. Sending by email / post is Phase 6." />
-      <textarea defaultValue={text} rows={34} className="w-full rounded-xl border bg-card p-4 font-mono text-[13px] leading-relaxed" aria-label="Notice text" />
-    </AppShell>
+      <textarea defaultValue={text} rows={34} className="w-full card-surface p-4 font-mono text-[13px] leading-relaxed" aria-label="Notice text" />
+    </>
   );
 }

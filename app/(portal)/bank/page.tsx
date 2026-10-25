@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppShell, PageHeader } from "@/components/app-shell";
+import { PageHeader } from "@/components/app-shell";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { CaseStatusBadge } from "@/components/badges";
 import { caseAction } from "@/app/actions";
@@ -21,14 +21,14 @@ export default async function BankInbox() {
   });
 
   return (
-    <AppShell user={user}>
+    <>
       <PageHeader title={`${user.bank?.name ?? "Bank"} · NOC inbox`} subtitle="Lien-release NOCs addressed to deposits held at your bank. Verify each one before lifting a lien." />
       <div className="space-y-3">
         {nocs.map((n) => {
           const p = n.payload as unknown as NocPayload;
           const awaiting = !n.revokedAt && n.case.status === "NOC_ISSUED";
           return (
-            <div key={n.id} className={cn("rounded-xl border bg-card p-4", awaiting && "border-primary/40")}>
+            <div key={n.id} className={cn("card-surface p-4", awaiting && "border-primary/40")}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="font-mono text-sm font-medium">{n.code}</div>
@@ -61,6 +61,6 @@ export default async function BankInbox() {
         })}
         {nocs.length === 0 && <p className="text-sm text-muted-foreground">No NOCs addressed to your bank.</p>}
       </div>
-    </AppShell>
+    </>
   );
 }

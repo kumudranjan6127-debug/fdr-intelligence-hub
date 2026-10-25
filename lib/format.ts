@@ -104,10 +104,12 @@ export function shortHash(h: string | null | undefined, n = 10): string {
   return h ? `${h.slice(0, n)}…` : "—";
 }
 
+const ACRONYMS: Record<string, string> = { noc: "NOC", ro: "RO", aa: "AA", loa: "LoA", eoa: "EoA", fdr: "FDR", sla: "SLA", ai: "AI", inapp: "in-app" };
+
 export function humanize(s: string): string {
   return s
     .toLowerCase()
     .split("_")
-    .map((w, i) => (i === 0 ? w[0].toUpperCase() + w.slice(1) : w))
+    .map((w, i) => ACRONYMS[w] ?? (i === 0 ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
 }

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
-import { AppShell } from "@/components/app-shell";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { Textarea } from "@/components/ui/textarea";
 import { revokeNocAction } from "@/app/actions";
@@ -26,7 +25,7 @@ export default async function NocLetter({ params }: { params: Promise<{ code: st
   const qr = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 168, errorCorrectionLevel: "M" });
 
   return (
-    <AppShell user={user}>
+    <>
       <div className="mx-auto max-w-3xl space-y-4">
         {noc.revokedAt && (
           <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">
@@ -116,13 +115,13 @@ export default async function NocLetter({ params }: { params: Promise<{ code: st
         </div>
 
         {!noc.revokedAt && ["AUTHORITY", "ADMIN"].includes(user.role) && (
-          <ActionForm action={revokeNocAction} hidden={{ code: noc.code }} className="rounded-xl border bg-card p-4">
+          <ActionForm action={revokeNocAction} hidden={{ code: noc.code }} className="card-surface p-4">
             <h2 className="text-sm font-semibold">Revoke this NOC</h2>
             <Textarea name="reason" rows={2} required placeholder="Reason (shown on the public verification page)" />
             <SubmitButton variant="destructive">Revoke</SubmitButton>
           </ActionForm>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

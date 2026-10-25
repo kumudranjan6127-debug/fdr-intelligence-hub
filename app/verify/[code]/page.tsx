@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { PublicShell } from "@/components/app-shell";
 import { MockLabel } from "@/components/badges";
 import { CopyChecker } from "@/components/copy-checker";
 import { db } from "@/lib/db";
@@ -19,7 +19,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
 
   if (!v.found || !v.noc) {
     return (
-      <AppShell user={user}>
+      <PublicShell user={user}>
         <div className="mx-auto max-w-xl rounded-2xl border border-red-300 bg-red-50 p-6 text-center">
           <XCircle className="mx-auto size-8 text-red-700" aria-hidden />
           <h1 className="mt-2 text-lg font-semibold">No NOC with code “{code}”</h1>
@@ -28,7 +28,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
             Try another code
           </Link>
         </div>
-      </AppShell>
+      </PublicShell>
     );
   }
 
@@ -45,7 +45,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
   }[verdict];
 
   return (
-    <AppShell user={user}>
+    <PublicShell user={user}>
       <div className="mx-auto max-w-3xl space-y-5">
         <div className={cn("flex items-start gap-3 rounded-2xl border p-5", banner.cls)} role="status">
           <banner.Icon className="mt-0.5 size-7 shrink-0" aria-hidden />
@@ -56,7 +56,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
           </div>
         </div>
 
-        <section className="rounded-xl border bg-card p-5">
+        <section className="card-surface p-5">
           <h2 className="mb-3 font-semibold">What the NOC says</h2>
           <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
             <dt className="text-muted-foreground">Issued by</dt>
@@ -88,7 +88,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
           </dl>
         </section>
 
-        <section className="rounded-xl border bg-card p-5">
+        <section className="card-surface p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold">Integrity</h2>
             <MockLabel>Hash anchored (DB) — ledger in Phase 3</MockLabel>
@@ -128,6 +128,6 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
           this prototype).
         </p>
       </div>
-    </AppShell>
+    </PublicShell>
   );
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AppShell, PageHeader } from "@/components/app-shell";
+import { PageHeader, PublicShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { currentUser } from "@/lib/session";
@@ -12,7 +12,7 @@ export default async function VerifyIndex({ searchParams }: { searchParams: Prom
   if (code?.trim()) redirect(`/verify/${encodeURIComponent(code.trim().toUpperCase())}`);
   const user = await currentUser();
   return (
-    <AppShell user={user}>
+    <PublicShell user={user}>
       <div className="mx-auto max-w-xl">
         <PageHeader title="Verify a lien-release NOC" subtitle="Scan the QR on the letter, or enter the NOC number printed under the title." />
         <form action="/verify" className="flex gap-2">
@@ -22,6 +22,6 @@ export default async function VerifyIndex({ searchParams }: { searchParams: Prom
           </Button>
         </form>
       </div>
-    </AppShell>
+    </PublicShell>
   );
 }

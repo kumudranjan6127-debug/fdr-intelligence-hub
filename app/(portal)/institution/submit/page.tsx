@@ -1,4 +1,4 @@
-import { AppShell, PageHeader } from "@/components/app-shell";
+import { PageHeader } from "@/components/app-shell";
 import { SubmitWizard, type PredecessorOption } from "@/components/submit-wizard";
 import { db } from "@/lib/db";
 import { formatINR } from "@/lib/format";
@@ -44,8 +44,10 @@ export default async function SubmitPage({ searchParams }: { searchParams: Promi
   const required = requiredAmount(inst, rules);
 
   return (
-    <AppShell user={user}>
+    <>
       <PageHeader
+        crumbs={[{ label: "My deposits", href: "/institution" }, { label: "Submit instrument" }]}
+        eyebrow="Guided submission"
         title="Submit a security deposit"
         subtitle={`${inst.name} · required ${formatINR(required)} (${inst.programmes} programmes${inst.isLeased ? ", doubled for leased premises" : ""}; rules ${version})`}
       />
@@ -57,6 +59,6 @@ export default async function SubmitPage({ searchParams }: { searchParams: Promi
         samples={SAMPLE_DOCS.map((s) => ({ file: s.file, title: s.title, hint: s.hint }))}
         affidavitWindowDays={rules.affidavitWindowDays}
       />
-    </AppShell>
+    </>
   );
 }

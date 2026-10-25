@@ -39,7 +39,7 @@ export function CopyChecker({ anchored }: { anchored: Anchored[] }) {
   }
 
   return (
-    <section className="rounded-xl border bg-card p-5">
+    <section className="card-surface p-5">
       <h2 className="font-semibold">Check a copy you hold</h2>
       <p className="text-sm text-muted-foreground">Choose the FDR copy or affidavit you received. It is hashed in your browser (SHA-256) — nothing is uploaded.</p>
       <input

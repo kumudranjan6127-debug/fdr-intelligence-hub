@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { AppShell, PageHeader, ROLE_LABEL } from "@/components/app-shell";
+import { PageHeader, ROLE_LABEL } from "@/components/app-shell";
 import { MockLabel } from "@/components/badges";
 import { db } from "@/lib/db";
 import { verifyEventChain } from "@/lib/events";
@@ -11,7 +11,7 @@ export const metadata = { title: "Audit trail" };
 export const dynamic = "force-dynamic";
 
 export default async function AuditPage() {
-  const user = await requirePageUser(["RO", "BUREAU", "AUTHORITY", "ADMIN"]);
+  await requirePageUser(["RO", "BUREAU", "AUTHORITY", "ADMIN"]);
   const [check, events, anchors] = await Promise.all([
     verifyEventChain(db),
     db.event.findMany({ orderBy: { seq: "desc" }, take: 100, include: { actor: { select: { name: true } }, instrument: { select: { code: true, id: true } } } }),
@@ -19,7 +19,7 @@ export default async function AuditPage() {
   ]);
 
   return (
-    <AppShell user={user}>
+    <>
       <PageHeader title="Audit trail" subtitle="Append-only. Each event's SHA-256 covers its content and the previous event's hash, so any edit or deletion breaks the chain." actions={<MockLabel>Hash anchored (DB) — ledger in Phase 3</MockLabel>} />
 
       <div className={`mb-6 flex items-start gap-3 rounded-xl border p-4 ${check.ok ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"}`} role="status">
@@ -30,7 +30,7 @@ export default async function AuditPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border bg-card">
+      <div className="card-surface overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
             <tr>
@@ -71,6 +71,6 @@ export default async function AuditPage() {
           </tbody>
         </table>
       </div>
-    </AppShell>
+    </>
   );
 }

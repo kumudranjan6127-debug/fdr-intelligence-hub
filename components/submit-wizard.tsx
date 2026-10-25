@@ -2,7 +2,7 @@
 // Guided wizard: type → details (claimed) → upload (AI extracts) → confirm field-by-field → submit.
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, FileSearch, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, FilePlus2, FileSearch, Globe, Landmark, Loader2, RefreshCw, Replace, Upload } from "lucide-react";
 import { submitInstrument, uploadForExtraction, uploadPlain, type UploadResult } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,7 +179,7 @@ export function SubmitWizard(props: {
         ))}
       </ol>
 
-      <div className="rounded-2xl border bg-card p-5 shadow-xs">
+      <div className="card-surface p-6">
         {step === 0 && (
           <div className="space-y-5">
             <fieldset>
@@ -187,14 +187,19 @@ export function SubmitWizard(props: {
               <div className="grid gap-2 sm:grid-cols-2">
                 {(
                   [
-                    ["FDR", "Fixed Deposit Receipt", "FD at a bank in favour of Member Secretary, AICTE, with lien marked"],
-                    ["ONLINE_DEPOSIT", "Online deposit", "Paid through the AICTE portal to AICTE's account (since 2019-20)"],
+                    ["FDR", "Fixed Deposit Receipt", "FD at a bank in favour of Member Secretary, AICTE, with lien marked", Landmark],
+                    ["ONLINE_DEPOSIT", "Online deposit", "Paid through the AICTE portal to AICTE's account (since 2019-20)", Globe],
                   ] as const
-                ).map(([v, t, d]) => (
-                  <label key={v} className={cn("cursor-pointer rounded-xl border p-3", type === v && "border-primary bg-primary/5")}>
+                ).map(([v, t, d, Icon]) => (
+                  <label key={v} className={cn("flex cursor-pointer gap-3 rounded-xl border p-4 transition hover:border-primary/40", type === v && "border-primary bg-primary/5 ring-1 ring-primary")}>
                     <input type="radio" name="type" className="sr-only" checked={type === v} onChange={() => setType(v)} />
-                    <div className="font-medium">{t}</div>
-                    <div className="text-xs text-muted-foreground">{d}</div>
+                    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", type === v ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                      <Icon className="size-4" aria-hidden />
+                    </span>
+                    <span>
+                      <span className="block font-medium">{t}</span>
+                      <span className="block text-xs text-muted-foreground">{d}</span>
+                    </span>
                   </label>
                 ))}
               </div>
@@ -204,13 +209,21 @@ export function SubmitWizard(props: {
               <div className="grid gap-2 sm:grid-cols-3">
                 {(
                   [
-                    ["NEW_SUBMISSION", "New deposit", "New institution or added programmes"],
-                    ["RENEWAL", "Renewal", "Same deposit renewed on maturity"],
-                    ["REPLACEMENT", "Replacement", "Bank change, early maturity or re-issue"],
+                    ["NEW_SUBMISSION", "New deposit", "New institution or added programmes", FilePlus2],
+                    ["RENEWAL", "Renewal", "Same deposit renewed on maturity", RefreshCw],
+                    ["REPLACEMENT", "Replacement", "Bank change, early maturity or re-issue", Replace],
                   ] as const
-                ).map(([v, t, d]) => (
-                  <label key={v} className={cn("cursor-pointer rounded-xl border p-3", caseType === v && "border-primary bg-primary/5", v !== "NEW_SUBMISSION" && !props.predecessors.length && "opacity-50")}>
+                ).map(([v, t, d, Icon]) => (
+                  <label
+                    key={v}
+                    className={cn(
+                      "cursor-pointer rounded-xl border p-4 transition hover:border-primary/40",
+                      caseType === v && "border-primary bg-primary/5 ring-1 ring-primary",
+                      v !== "NEW_SUBMISSION" && !props.predecessors.length && "cursor-not-allowed opacity-50",
+                    )}
+                  >
                     <input type="radio" name="caseType" className="sr-only" checked={caseType === v} disabled={v !== "NEW_SUBMISSION" && !props.predecessors.length} onChange={() => setCaseType(v)} />
+                    <Icon className={cn("mb-2 size-4", caseType === v ? "text-primary" : "text-muted-foreground")} aria-hidden />
                     <div className="font-medium">{t}</div>
                     <div className="text-xs text-muted-foreground">{d}</div>
                   </label>
@@ -290,18 +303,28 @@ export function SubmitWizard(props: {
               <h2 className="font-medium">Upload the {type === "FDR" ? "FDR copy" : "payment acknowledgement"}</h2>
               <p className="text-sm text-muted-foreground">PDF, PNG or JPEG up to 4 MB. AI reads it into the <TierBadge tier="EXTRACTED" /> tier — nothing is accepted automatically. A SHA-256 is recorded on upload.</p>
             </div>
-            <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/40", busy && "pointer-events-none opacity-60")}>
+            <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/25 bg-primary/[0.02] p-8 text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5", busy && "pointer-events-none opacity-60")}>
               {busy ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Upload className="size-5" aria-hidden />}
               {busy ? "Reading document…" : upload ? `Replace ${upload.filename}` : "Choose a file"}
               <input type="file" accept="application/pdf,image/png,image/jpeg" className="sr-only" onChange={(e) => e.target.files?.[0] && doUpload(e.target.files[0], "fdr")} />
             </label>
             <div>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">Or use a specimen (fictional bank, stamped SPECIMEN):</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {props.samples.map((s) => (
-                  <button key={s.file} type="button" disabled={busy} onClick={() => loadSample(s.file)} className="rounded-lg border px-2.5 py-1.5 text-left text-xs hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50" title={s.hint}>
-                    <div className="font-medium">{s.title}</div>
-                    <div className="text-muted-foreground">{s.hint}</div>
+                  <button
+                    key={s.file}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => loadSample(s.file)}
+                    className="flex items-start gap-2.5 rounded-lg border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50"
+                    title={s.hint}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded bg-red-50 text-[9px] font-bold text-red-700">PDF</span>
+                    <span>
+                      <span className="block font-medium">{s.title}</span>
+                      <span className="block text-muted-foreground">{s.hint}</span>
+                    </span>
                   </button>
                 ))}
               </div>
