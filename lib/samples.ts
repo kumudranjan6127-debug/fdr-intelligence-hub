@@ -33,7 +33,10 @@ function words(paise: string): string {
 async function base(title: string) {
   const pdf = await PDFDocument.create();
   pdf.setTitle(title);
-  pdf.setProducer("FDR Intelligence Hub — specimen generator");
+  pdf.setProducer("FDR Intelligence Hub - specimen generator");
+  // Fixed metadata dates keep output byte-stable, so a sample's SHA-256 is reproducible.
+  pdf.setCreationDate(new Date("2026-01-01T00:00:00Z"));
+  pdf.setModificationDate(new Date("2026-01-01T00:00:00Z"));
   const page = pdf.addPage([595, 842]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);

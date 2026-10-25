@@ -7,6 +7,7 @@ import { addDays, startOfDayUTC, toDay } from "../lib/format";
 import { FIELD_KEYS, makeField, type Confirmed, type FieldKey, type FieldValue } from "../lib/provenance";
 import { DEFAULT_RULES, penaltyAmount } from "../lib/rules";
 import { makeAffidavitPdf, makeFdrPdf, makeOnlineReceiptPdf } from "../lib/samples";
+import { SAMPLE_DOCS } from "../lib/sample-specs";
 import { parseFdrText } from "../lib/extract";
 import { sha256Hex } from "../lib/hash";
 import { syncDiscrepancies, recomputeRisk } from "../lib/services/core";
@@ -335,6 +336,25 @@ async function main() {
     });
     ids.user[u.key] = row.id;
     userRole[u.key] = u.role;
+  }
+
+  // Bank-book entries for the downloadable specimens, so the AA mock can confirm demo submissions.
+  for (const d of SAMPLE_DOCS) {
+    const isFdr = d.kind === "FDR";
+    await db.bankDepositRecord.create({
+      data: {
+        bankId: ids.bank[d.bankKey as BankKey],
+        fdrNumber: isFdr ? d.spec.fdrNumber : d.spec.txnRef,
+        accountHolder: isFdr ? d.spec.depositor : "AICTE Security Deposit Collection A/c",
+        inFavourOf: "Member Secretary, AICTE",
+        principal: d.spec.amountPaise,
+        openingDate: new Date(`${isFdr ? d.spec.issueDate : d.spec.date}T00:00:00Z`),
+        maturityDate: new Date(`${isFdr ? d.spec.maturityDate : d.spec.termEnd}T00:00:00Z`),
+        interestRate: isFdr ? d.spec.interestRate : "0",
+        lienMarked: isFdr ? d.spec.lienMarked : true,
+        lienHolder: !isFdr || d.spec.lienMarked ? "Member Secretary, AICTE" : null,
+      },
+    });
   }
 
   for (const s of SPECS) await seedInstrument(s);

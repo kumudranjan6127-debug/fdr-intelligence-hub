@@ -5,7 +5,7 @@ import { getAAProvider, confirmedFromFI } from "../aa";
 import { db } from "../db";
 import { recordEvent, type Actor } from "../events";
 import { anchor } from "../hash";
-import { addDays, rupeesToPaise } from "../format";
+import { rupeesToPaise } from "../format";
 import {
   FIELD_KEYS,
   bestEvidence,
@@ -408,3 +408,36 @@ export async function revokeNoc(user: User, code: string, reason: string) {
 }
 
 export const RELEASE_ELIGIBLE: InstrumentStatus[] = ["ACTIVE", "EXPIRING", "MATURED"];
+
+// ───────────────────────── supplementary documents ─────────────────────────
+
+/** Institution adds a document (e.g. a missing affidavit or a corrected FDR copy). FDR copies are re-extracted. */
+export async function addInstrumentDocument(user: User, instrumentId: string, kind: DocumentKind, fileId: string, extraction: ExtractionResult | null) {
+  if (user.role !== "INSTITUTION") throw new AuthError("Only the institution can add documents here");
+  const now = new Date();
+  await db.$transaction(async (tx) => {
+    const ins = await tx.instrument.findUniqueOrThrow({ where: { id: instrumentId }, include: { documents: { select: { kind: true } } } });
+    if (ins.institutionId !== user.institutionId) throw new AuthError("Not your instrument");
+    const file = await tx.storedFile.findUniqueOrThrow({ where: { id: fileId } });
+    const version = ins.documents.filter((d) => d.kind === kind).length + 1;
+    const doc = await tx.document.create({
+      data: { instrumentId, kind, fileId, url: `/api/files/${fileId}`, filename: file.filename, sha256: file.sha256, version, uploadedById: user.id, extractedJson: extraction ? json(extraction) : undefined },
+    });
+    await anchor(tx, "DOCUMENT", doc.id, doc.sha256);
+    const actor = actorOf(user);
+    await recordEvent(tx, { instrumentId, actor, action: "DOCUMENT_UPLOADED", after: { kind, filename: doc.filename, sha256: doc.sha256, version } });
+    if (kind === "FDR_COPY" && extraction) {
+      const f = tierFieldsOf(ins);
+      const next = Object.fromEntries(
+        FIELD_KEYS.map((k) => {
+          const ex = extraction.fields[k];
+          const extracted = ex && ex.value !== null ? { value: ex.value, confidence: ex.confidence, documentId: doc.id, bbox: null, engine: extraction.engine } : f[k].extracted;
+          return [k, makeField(k, f[k].claimed, ins.type === "ONLINE_DEPOSIT" && k === "lienNoted" ? null : extracted, f[k].confirmed)];
+        }),
+      ) as TierFields;
+      await tx.instrument.update({ where: { id: instrumentId }, data: fieldsToColumns(next) });
+      await recordEvent(tx, { instrumentId, actor: { id: null, role: "ADMIN" }, action: "AI_EXTRACTED", after: { engine: extraction.engine, fields: extraction.fields, documentVersion: version } });
+    }
+  });
+  await syncInstrument(db, instrumentId, now);
+}
