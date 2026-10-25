@@ -1,0 +1,381 @@
+// FDR Intelligence Hub — data model (SIH26265)
+// Money is stored in paise (Decimal(16,0)); dates in UTC.
+// Three-tier fields on Instrument are JSON: { claimed, extracted, confirmed, status } — see lib/provenance.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INSTITUTION
+  BANK
+  RO
+  BUREAU
+  CELL
+  AUTHORITY
+  ADMIN
+}
+
+enum InstrumentType {
+  FDR
+  ONLINE_DEPOSIT
+}
+
+enum InstrumentStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_SCRUTINY
+  ACTIVE
+  EXPIRING
+  MATURED
+  RENEWED
+  REPLACED
+  RELEASE_REQUESTED
+  RELEASED
+  CLOSED
+  REJECTED
+}
+
+enum CaseType {
+  NEW_SUBMISSION
+  RENEWAL
+  REPLACEMENT
+  RELEASE
+}
+
+enum CaseStatus {
+  DRAFT
+  SUBMITTED
+  COMPLETENESS_CHECK
+  RO_SCRUTINY
+  CLARIFICATION_REQUIRED
+  CLEARANCES_PENDING
+  PENALTY_ASSESSMENT
+  DECISION_RECORDED
+  NOC_ISSUED
+  BANK_CONFIRMED
+  CLOSED
+  RETURNED
+  REJECTED
+  WITHDRAWN
+  ON_HOLD
+}
+
+enum Provenance {
+  CLAIMED
+  EXTRACTED
+  CONFIRMED
+}
+
+enum DocumentKind {
+  FDR_COPY
+  AFFIDAVIT_3
+  AFFIDAVIT_6
+  LOA_EOA
+  BANK_CONFIRMATION
+  OTHER
+}
+
+enum Cell {
+  FINANCE
+  LEGAL
+  GRIEVANCE
+}
+
+enum ClearanceStatus {
+  PENDING
+  CLEARED
+  OBJECTION
+}
+
+enum Severity {
+  LOW
+  MED
+  HIGH
+}
+
+enum ReminderKind {
+  MATURITY_90
+  MATURITY_30
+  MATURITY_7
+  OVERDUE
+  AFFIDAVIT_DUE
+}
+
+enum Channel {
+  INAPP
+  EMAIL
+  WHATSAPP
+}
+
+enum AnchorRefType {
+  DOCUMENT
+  EVENT
+  NOC
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  role          Role
+  designation   String?
+  cell          Cell?
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  bankId        String?
+  bank          Bank?        @relation(fields: [bankId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  documents Document[]
+  events    Event[]
+  nocs      Noc[]
+}
+
+model Institution {
+  id             String       @id @default(cuid())
+  name           String
+  state          String
+  regionalOffice String
+  permanentId    String       @unique
+  isGovernment   Boolean      @default(false)
+  isLeased       Boolean      @default(false)
+  programmes     Int          @default(1)
+  lastEoaYear    Int?
+  riskScore      Float        @default(0)
+  riskBreakdown  Json?
+  createdAt      DateTime     @default(now())
+  users          User[]
+  instruments    Instrument[]
+}
+
+model Bank {
+  id             String              @id @default(cuid())
+  name           String              @unique
+  ifscPrefix     String
+  users          User[]
+  instruments    Instrument[]
+  depositRecords BankDepositRecord[]
+}
+
+model Instrument {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  institutionId  String
+  institution    Institution      @relation(fields: [institutionId], references: [id])
+  type           InstrumentType
+  status         InstrumentStatus @default(DRAFT)
+  bankId         String?
+  bank           Bank?            @relation(fields: [bankId], references: [id])
+  // three-tier fields
+  bankName       Json
+  fdrNumber      Json
+  amount         Json
+  issueDate      Json
+  maturityDate   Json
+  lienNoted      Json
+  requiredAmount Decimal          @db.Decimal(16, 0)
+  intimationDate DateTime?
+  affidavitDueAt DateTime?
+  submittedAt    DateTime?
+  predecessorId  String?
+  predecessor    Instrument?      @relation("Chain", fields: [predecessorId], references: [id])
+  successors     Instrument[]     @relation("Chain")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  documents     Document[]
+  cases         Case[]
+  events        Event[]
+  discrepancies Discrepancy[]
+  reminders     Reminder[]
+  nocs          Noc[]
+
+  @@index([institutionId])
+  @@index([status])
+}
+
+model StoredFile {
+  id        String     @id @default(cuid())
+  sha256    String
+  mime      String
+  size      Int
+  filename  String
+  data      Bytes?
+  blobUrl   String?
+  createdAt DateTime   @default(now())
+  documents Document[]
+}
+
+model Document {
+  id            String       @id @default(cuid())
+  instrumentId  String
+  instrument    Instrument   @relation(fields: [instrumentId], references: [id])
+  caseId        String?
+  case          Case?        @relation(fields: [caseId], references: [id])
+  kind          DocumentKind
+  fileId        String
+  file          StoredFile   @relation(fields: [fileId], references: [id])
+  url           String
+  filename      String
+  sha256        String
+  version       Int          @default(1)
+  uploadedById  String
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  extractedJson Json?
+  createdAt     DateTime     @default(now())
+
+  @@index([instrumentId])
+}
+
+model Case {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  instrumentId    String
+  instrument      Instrument  @relation(fields: [instrumentId], references: [id])
+  type            CaseType
+  status          CaseStatus  @default(SUBMITTED)
+  assigneeRole    Role?
+  assigneeId      String?
+  blockingReason  String?
+  nextAction      String?
+  penaltyPct      Decimal?    @db.Decimal(5, 2)
+  penaltyRuleRef  String?
+  penaltyAmount   Decimal?    @db.Decimal(16, 0)
+  decisionNote    String?
+  openedAt        DateTime    @default(now())
+  statusChangedAt DateTime    @default(now())
+  closedAt        DateTime?
+  clearances      Clearance[]
+  documents       Document[]
+  events          Event[]
+  nocs            Noc[]
+
+  @@index([status])
+}
+
+model Clearance {
+  id          String          @id @default(cuid())
+  caseId      String
+  case        Case            @relation(fields: [caseId], references: [id])
+  cell        Cell
+  status      ClearanceStatus @default(PENDING)
+  note        String?
+  decidedById String?
+  decidedAt   DateTime?
+
+  @@unique([caseId, cell])
+}
+
+// Append-only. Each event's sha256 covers its content + the previous event's hash (hash chain).
+model Event {
+  id           String      @id @default(cuid())
+  seq          Int         @unique @default(autoincrement())
+  instrumentId String?
+  instrument   Instrument? @relation(fields: [instrumentId], references: [id])
+  caseId       String?
+  case         Case?       @relation(fields: [caseId], references: [id])
+  actorId      String?
+  actor        User?       @relation(fields: [actorId], references: [id])
+  actorRole    Role
+  action       String
+  before       Json?
+  after        Json?
+  reason       String?
+  prevSha256   String?
+  sha256       String
+  createdAt    DateTime    @default(now())
+
+  @@index([instrumentId])
+  @@index([caseId])
+}
+
+model Discrepancy {
+  id           String     @id @default(cuid())
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  code         String
+  field        String
+  severity     Severity
+  message      String
+  evidence     Json
+  detectedAt   DateTime   @default(now())
+  resolvedAt   DateTime?
+
+  @@unique([instrumentId, code, field])
+}
+
+model Reminder {
+  id           String       @id @default(cuid())
+  instrumentId String
+  instrument   Instrument   @relation(fields: [instrumentId], references: [id])
+  kind         ReminderKind
+  message      String
+  dueAt        DateTime
+  sentAt       DateTime?
+  channel      Channel      @default(INAPP)
+  createdAt    DateTime     @default(now())
+
+  @@unique([instrumentId, kind])
+}
+
+model Noc {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  caseId       String
+  case         Case       @relation(fields: [caseId], references: [id])
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  issuedById   String
+  issuedBy     User       @relation(fields: [issuedById], references: [id])
+  issuedAt     DateTime   @default(now())
+  payload      Json
+  pdfUrl       String?
+  sha256       String
+  revokedAt    DateTime?
+  revokeReason String?
+}
+
+model LedgerAnchor {
+  id         String        @id @default(cuid())
+  refType    AnchorRefType
+  refId      String
+  sha256     String
+  anchoredAt DateTime      @default(now())
+  txRef      String? // null in MVP — filled by the EVM anchor in Phase 3
+
+  @@index([refType, refId])
+}
+
+model RuleSet {
+  id            String   @id @default(cuid())
+  version       String   @unique
+  effectiveFrom DateTime
+  rules         Json
+  approvedBy    String
+  createdAt     DateTime @default(now())
+}
+
+// The mock bank's own book of term deposits. Read only by the mock Account Aggregator provider (lib/aa).
+model BankDepositRecord {
+  id            String   @id @default(cuid())
+  bankId        String
+  bank          Bank     @relation(fields: [bankId], references: [id])
+  fdrNumber     String
+  accountHolder String
+  inFavourOf    String
+  principal     Decimal  @db.Decimal(16, 0)
+  openingDate   DateTime
+  maturityDate  DateTime
+  interestRate  Decimal  @db.Decimal(5, 2)
+  lienMarked    Boolean
+  lienHolder    String?
+  status        String   @default("ACTIVE")
+
+  @@unique([bankId, fdrNumber])
+}
