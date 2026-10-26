@@ -131,7 +131,7 @@ export default async function CaseReview({ params, searchParams }: { params: Pro
 
           {open && (
             <section className="card-surface overflow-hidden border-primary/30">
-              <div className="flex items-center gap-2 border-b bg-primary/[0.04] px-5 py-3">
+              <div className="flex items-center gap-2 border-b bg-primary/4 px-5 py-3">
                 <Gavel className="size-4 text-primary" aria-hidden />
                 <h2 className="text-[15px] font-semibold tracking-tight">Your decision</h2>
                 <span className="ml-auto text-xs text-muted-foreground">Acting as {humanize(user.role)}</span>
@@ -238,7 +238,7 @@ export default async function CaseReview({ params, searchParams }: { params: Pro
                       {c.clearances.map((x) => {
                         const mineToDecide = x.status === "PENDING" && c.status === "CLEARANCES_PENDING" && (user.role === "ADMIN" || (user.role === "CELL" && user.cell === x.cell));
                         return (
-                          <li key={x.id} className={cn("rounded-lg border px-4 py-3", mineToDecide && "border-primary/40 bg-primary/[0.03]")}>
+                          <li key={x.id} className={cn("rounded-lg border px-4 py-3", mineToDecide && "border-primary/40 bg-primary/3")}>
                             <div className="flex flex-wrap items-center gap-2.5">
                               {x.status === "CLEARED" ? (
                                 <CheckCircle2 className="size-5 text-emerald-600" aria-hidden />

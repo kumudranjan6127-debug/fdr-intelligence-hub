@@ -102,7 +102,7 @@ export default async function Dashboard() {
                 <span className="text-xs text-muted-foreground">{b.label}</span>
                 <div className="flex items-center gap-2">
                   <div className="h-6 flex-1 rounded-md bg-muted/60">
-                    <div className="h-6 rounded-r-[4px] rounded-l-md bg-primary/80 transition-all hover:bg-primary" style={{ width: `${(b.n / maxBucket) * 100}%`, minWidth: b.n ? 6 : 0 }} />
+                    <div className="h-6 rounded-r-sm rounded-l-md bg-primary/80 transition-all hover:bg-primary" style={{ width: `${(b.n / maxBucket) * 100}%`, minWidth: b.n ? 6 : 0 }} />
                   </div>
                   <span className="w-6 text-right text-sm font-medium tabular-nums">{b.n}</span>
                 </div>

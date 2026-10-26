@@ -303,7 +303,7 @@ export function SubmitWizard(props: {
               <h2 className="font-medium">Upload the {type === "FDR" ? "FDR copy" : "payment acknowledgement"}</h2>
               <p className="text-sm text-muted-foreground">PDF, PNG or JPEG up to 4 MB. AI reads it into the <TierBadge tier="EXTRACTED" /> tier — nothing is accepted automatically. A SHA-256 is recorded on upload.</p>
             </div>
-            <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/25 bg-primary/[0.02] p-8 text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5", busy && "pointer-events-none opacity-60")}>
+            <label className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/25 bg-primary/2 p-8 text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5", busy && "pointer-events-none opacity-60")}>
               {busy ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Upload className="size-5" aria-hidden />}
               {busy ? "Reading document…" : upload ? `Replace ${upload.filename}` : "Choose a file"}
               <input type="file" accept="application/pdf,image/png,image/jpeg" className="sr-only" onChange={(e) => e.target.files?.[0] && doUpload(e.target.files[0], "fdr")} />

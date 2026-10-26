@@ -19,7 +19,7 @@ function keysFor(type: "FDR" | "ONLINE_DEPOSIT") {
 export function ProvenanceTable({ fields, type }: { fields: TierFields; type: "FDR" | "ONLINE_DEPOSIT" }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-160 text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
             <th className="w-[19%] px-5 py-2.5 font-medium">Field</th>

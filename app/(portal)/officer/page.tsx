@@ -144,7 +144,7 @@ export default async function OfficerQueue({ searchParams }: { searchParams: Pro
           </EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full min-w-225 text-sm">
               <thead>
                 <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
                   <th className="px-4 py-2.5 font-medium">Risk</th>
@@ -160,7 +160,7 @@ export default async function OfficerQueue({ searchParams }: { searchParams: Pro
                 {shown.map(({ c, w }) => {
                   const high = c.instrument.discrepancies.filter((d) => d.severity === "HIGH").length;
                   return (
-                    <tr key={c.id} className="group relative border-b align-middle last:border-b-0 hover:bg-primary/[0.03]">
+                    <tr key={c.id} className="group relative border-b align-middle last:border-b-0 hover:bg-primary/3">
                       <td className="px-4 py-3">
                         <RiskChip score={c.instrument.institution.riskScore} />
                       </td>

@@ -111,7 +111,7 @@ export function PortalShell({ user, children }: { user: SessionUser; children: R
       </header>
 
       <div className="lg:pl-64">
-        <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-350 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
         <Footer />
       </div>
     </div>
@@ -146,7 +146,7 @@ export function PublicShell({ user, children, wide }: { user: SessionUser | null
 function Footer() {
   return (
     <footer className="border-t">
-      <div className="mx-auto max-w-[1400px] px-4 py-4 text-xs leading-relaxed text-muted-foreground sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-350 px-4 py-4 text-xs leading-relaxed text-muted-foreground sm:px-6 lg:px-8">
         All institutions, banks and people are fictional · bank confirmation via <strong className="font-medium text-foreground/80">Mock AA sandbox</strong> · hashes anchored in DB (ledger in Phase 3).{" "}
         <strong className="font-medium text-foreground/80">A matching hash proves a record is unchanged, not that a bank issued it</strong> — authenticity comes from the bank.
       </div>
