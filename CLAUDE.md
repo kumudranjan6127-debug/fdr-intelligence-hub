@@ -34,17 +34,14 @@ Verification-first, not a CRUD register:
 - MVP steps 1–7 are done. The gov-tech UI redesign is done. All 5 demo flows pass in a real browser. Build, lint and tests are clean.
 - GitHub (private): https://github.com/kumudranjan6127-debug/fdr-intelligence-hub — branch `master`. Pushes auto-deploy to Vercel.
 - Vercel: https://fdr-intelligence-hub.vercel.app, with Neon connected (both `DATABASE_URL` and `DATABASE_URL_UNPOOLED` are set).
-- **OPEN BUG:** the production site shows "Application error". `/api/health` reports Prisma `P2021`: **the Neon database has no tables** (migrations and seed never ran).
-  - The first attempt used a `vercel-build` script, which Vercel ignored.
-  - The fix now in `package.json`: `build` = `prisma generate && node scripts/vercel-db-setup.mjs && next build`. That script runs `prisma migrate deploy` and the seed-if-empty step only when `VERCEL` is set.
-  - After pushing that fix the database was still empty, so that deploy probably failed or did not run. **Its build log has not been seen yet.**
+- **Deploy bug fixed (26 Oct):** the Vercel dashboard had a Build Command override (`next build`), so `npm run build` (and its migrate + seed-if-empty step) never ran. `vercel.json` now pins `"buildCommand": "npm run build"`. Neon has tables and the demo seed; `/api/health` shows `ok: true`.
+- Live check: `scratch/ui-flows-live.mjs` (no DB access; finds ids from page links) passed all 5 flows on the live URL. Each run adds a test submission and uses up the one `CLEARANCES_PENDING` release case, so **reseed Neon before the real demo**.
+- Demo gap: Narmada's amount-drop FDR (seed chain B3) has no link anywhere in the officer UI; the presenter needs its direct URL.
 
 ## Next steps
-1. Get Vercel access: the Vercel MCP (installed in `~/.claude.json`; needs `/mcp` → vercel → Authenticate), **or** `npx vercel login`, **or** ask the user for `DATABASE_URL_UNPOOLED`.
-2. Read the latest deployment's build log and fix the cause. Alternatively, run `DATABASE_URL=<unpooled> DATABASE_URL_UNPOOLED=<unpooled> npx prisma migrate deploy && npm run db:seed` against Neon. Never commit that URL.
-3. Check `https://fdr-intelligence-hub.vercel.app/api/health` shows `ok: true`, then run `scratch/ui-flows.mjs` with `BASE=` set to the live URL.
-4. Optional env vars: `ANTHROPIC_API_KEY`, `CRON_SECRET`.
-5. After the deadline: roadmap phases P2–P10 (README). The recommendation was P4 (real Account Aggregator) and P10 (metrics) first.
+1. Reseed Neon before the demo (needs `DATABASE_URL_UNPOOLED` from the user, or a one-off forced reseed), then recheck `/api/health`.
+2. Optional env vars: `ANTHROPIC_API_KEY`, `CRON_SECRET`.
+3. After the deadline: roadmap phases P2–P10 (README). The recommendation was P4 (real Account Aggregator) and P10 (metrics) first.
 
 ## Conventions
 - Commit messages: `feat(scope): …`, in small commits. End each with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
