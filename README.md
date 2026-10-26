@@ -96,7 +96,7 @@ Environment (`.env`):
 1. On [vercel.com](https://vercel.com/new) → **Import** this GitHub repo (framework: Next.js, defaults are fine).
 2. Before the first deploy: project → **Storage → Create → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) automatically.
 3. Optional env vars: `ANTHROPIC_API_KEY` (Claude extraction), `CRON_SECRET` (daily maturity cron; Vercel sends it automatically), `BLOB_READ_WRITE_TOKEN`.
-4. **Deploy.** The `vercel-build` script runs `prisma migrate deploy`, then seeds the demo data **only if the database is empty**, then `next build`. Redeploys never wipe data.
+4. **Deploy.** On Vercel, `npm run build` runs `prisma migrate deploy`, then seeds the demo data **only if the database is empty**, then `next build`. Redeploys never wipe data.
 5. To reset the demo data later: `vercel env pull .env.production.local`, then `DATABASE_URL=<unpooled url> npm run db:seed`.
 
 ## Project layout
