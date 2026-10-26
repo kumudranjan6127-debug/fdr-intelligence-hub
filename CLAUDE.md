@@ -41,7 +41,7 @@ Verification-first, not a CRUD register:
 - OCR: there is **no PaddleOCR** yet (it is roadmap P5). The text parser only reads PDFs that have a text layer; scanned files need `ANTHROPIC_API_KEY` (Claude).
 
 ## Next steps
-1. Optional env vars: `ANTHROPIC_API_KEY`, `CRON_SECRET`.
+1. `ANTHROPIC_API_KEY` is set on Vercel Production (26 Oct); live extraction uses Claude (about 9 s, 96–97% confidence on the sample). Still optional: `CRON_SECRET`.
 2. Idea PPT for 28 Oct, built from the README pitch and fresh live screenshots.
 3. After the deadline: roadmap phases P2–P10 (README). The recommendation was P4 (real Account Aggregator) and P10 (metrics) first.
 
