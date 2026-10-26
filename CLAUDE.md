@@ -35,12 +35,14 @@ Verification-first, not a CRUD register:
 - GitHub (private): https://github.com/kumudranjan6127-debug/fdr-intelligence-hub — branch `master`. Pushes auto-deploy to Vercel.
 - Vercel: https://fdr-intelligence-hub.vercel.app, with Neon connected (both `DATABASE_URL` and `DATABASE_URL_UNPOOLED` are set).
 - **Deploy bug fixed (26 Oct):** the Vercel dashboard had a Build Command override (`next build`), so `npm run build` (and its migrate + seed-if-empty step) never ran. `vercel.json` now pins `"buildCommand": "npm run build"`. Neon has tables and the demo seed; `/api/health` shows `ok: true`.
-- Live check: `scratch/ui-flows-live.mjs` (no DB access; finds ids from page links) passed all 5 flows on the live URL. Each run adds a test submission and uses up the one `CLEARANCES_PENDING` release case, so **reseed Neon before the real demo**.
-- Demo gap: Narmada's amount-drop FDR (seed chain B3) has no link anywhere in the officer UI; the presenter needs its direct URL.
+- Neon was reseeded on 26 Oct and checked read-only with `scratch/check-live.mjs` (all demo pages OK, no console errors). **Do not run `scratch/ui-flows-live.mjs` on live before the demo:** it adds test data and uses up the one `CLEARANCES_PENDING` release case.
+- Reseed live: push a commit whose message contains `[reseed]`. `scripts/vercel-db-setup.mjs` then runs the full seed on that one deploy. Never put `[reseed]` in an ordinary commit message.
+- Dashboard "Renewal chain alerts" links the Shivneri gap, the Narmada amount drop and the Kaveri missing lien. The links open `?tab=chain` on the passport.
+- OCR: there is **no PaddleOCR** yet (it is roadmap P5). The text parser only reads PDFs that have a text layer; scanned files need `ANTHROPIC_API_KEY` (Claude).
 
 ## Next steps
-1. Reseed Neon before the demo (needs `DATABASE_URL_UNPOOLED` from the user, or a one-off forced reseed), then recheck `/api/health`.
-2. Optional env vars: `ANTHROPIC_API_KEY`, `CRON_SECRET`.
+1. Optional env vars: `ANTHROPIC_API_KEY`, `CRON_SECRET`.
+2. Idea PPT for 28 Oct, built from the README pitch and fresh live screenshots.
 3. After the deadline: roadmap phases P2–P10 (README). The recommendation was P4 (real Account Aggregator) and P10 (metrics) first.
 
 ## Conventions
