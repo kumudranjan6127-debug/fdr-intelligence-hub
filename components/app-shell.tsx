@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Role } from "@prisma/client";
 import { ChevronRight } from "lucide-react";
 import { signOut } from "@/app/actions";
-import type { SessionUser } from "@/lib/session";
+import { homeFor, type SessionUser } from "@/lib/session";
 import { MobileNav, SidebarNav, type NavItem } from "./sidebar-nav";
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -39,9 +39,9 @@ export const NAV: Record<Role, NavItem[]> = {
   ADMIN: OFFICER,
 };
 
-function Brand({ compact }: { compact?: boolean }) {
+function Brand({ compact, href = "/" }: { compact?: boolean; href?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
+    <Link href={href} className="flex items-center gap-2.5">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy text-[11px] font-bold tracking-tight text-white shadow-sm">FDR</span>
       {!compact && (
         <span className="leading-tight">
@@ -93,7 +93,7 @@ export function PortalShell({ user, children }: { user: SessionUser; children: R
       <div className="tricolor h-1 w-full" aria-hidden />
       <aside className="fixed inset-y-0 left-0 top-1 z-30 hidden w-64 flex-col border-r bg-card lg:flex">
         <div className="px-5 py-5">
-          <Brand />
+          <Brand href={homeFor(user.role)} />
         </div>
         <div className="px-3">
           <div className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{ROLE_LABEL[user.role]}</div>
@@ -106,7 +106,7 @@ export function PortalShell({ user, children }: { user: SessionUser; children: R
       </aside>
 
       <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-card/95 px-4 py-2.5 backdrop-blur lg:hidden">
-        <Brand compact />
+        <Brand compact href={homeFor(user.role)} />
         <MobileNav items={items} userName={user.name} role={ROLE_LABEL[user.role]} />
       </header>
 
@@ -127,7 +127,7 @@ export function PublicShell({ user, children, wide }: { user: SessionUser | null
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Brand />
           {user ? (
-            <Link href="/" className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+            <Link href={homeFor(user.role)} className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">
               Back to portal
             </Link>
           ) : (
