@@ -82,7 +82,8 @@ Environment (`.env`):
 
 | Variable | Needed | Purpose |
 |---|---|---|
-| `DATABASE_URL` | yes | Postgres (Neon in production) |
+| `DATABASE_URL` | yes | Postgres, pooled (Neon in production) |
+| `DATABASE_URL_UNPOOLED` | yes | Direct connection, used by migrations (same as `DATABASE_URL` locally) |
 | `ANTHROPIC_API_KEY` | optional | Claude vision extraction. If unset, the local text parser is used. |
 | `BLOB_READ_WRITE_TOKEN` | optional | Vercel Blob for uploads. If unset, bytes are stored in Postgres. |
 | `CRON_SECRET` | prod | Protects `/api/cron/maturity` (Vercel Cron sends it as a Bearer token) |
@@ -92,13 +93,11 @@ Environment (`.env`):
 
 ## Deploy (Vercel + Neon)
 
-1. Create a Neon project. Use the **pooled** connection string with `&pgbouncer=true` as `DATABASE_URL` in Vercel.
-2. From your machine, migrate and seed against Neon's **direct** connection string:
-   ```bash
-   DATABASE_URL="<neon direct url>" npx prisma migrate deploy
-   DATABASE_URL="<neon direct url>" npm run db:seed
-   ```
-3. Import the repo in Vercel, set the env vars above, and deploy. `vercel.json` schedules the daily maturity job.
+1. On [vercel.com](https://vercel.com/new) → **Import** this GitHub repo (framework: Next.js, defaults are fine).
+2. Before the first deploy: project → **Storage → Create → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) automatically.
+3. Optional env vars: `ANTHROPIC_API_KEY` (Claude extraction), `CRON_SECRET` (daily maturity cron; Vercel sends it automatically), `BLOB_READ_WRITE_TOKEN`.
+4. **Deploy.** The `vercel-build` script runs `prisma migrate deploy`, then seeds the demo data **only if the database is empty**, then `next build`. Redeploys never wipe data.
+5. To reset the demo data later: `vercel env pull .env.production.local`, then `DATABASE_URL=<unpooled url> npm run db:seed`.
 
 ## Project layout
 
