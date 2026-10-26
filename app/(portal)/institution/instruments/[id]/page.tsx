@@ -24,8 +24,9 @@ export const metadata = { title: "FDR Passport" };
 
 const selectCls = "h-9 w-full rounded-lg border bg-background px-2.5 text-sm";
 
-export default async function PassportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PassportPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const user = await requirePageUser();
   const v = await loadInstrument(id);
   if (!v || !canView(user, v.ins)) notFound();
@@ -134,7 +135,7 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
             />
           )}
 
-          <Tabs defaultValue={openDisc.length === 0 && chainIssues > 0 ? "chain" : "verify"} className="gap-4">
+          <Tabs defaultValue={["verify", "chain", "docs", "audit"].includes(tab ?? "") ? tab : openDisc.length === 0 && chainIssues > 0 ? "chain" : "verify"} className="gap-4">
             <TabsList variant="line" className="w-full justify-start gap-4 border-b pb-0">
               <TabsTrigger value="verify" className="flex-none px-1 pb-2.5">
                 <ShieldCheck aria-hidden /> Verification

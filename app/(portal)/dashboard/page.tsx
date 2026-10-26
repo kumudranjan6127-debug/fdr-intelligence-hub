@@ -10,7 +10,7 @@ import { addYears, daysBetween, fmtDate, fmtDateTime, formatLakh, humanize } fro
 import { bestEvidence, effectiveValue, normalize, tierFieldsOf } from "@/lib/provenance";
 import { requirePageUser } from "@/lib/session";
 import { getActiveRules, toChainNode } from "@/lib/services/core";
-import { buildChain } from "@/lib/chain";
+import { allChains, analyzeChain, buildChain } from "@/lib/chain";
 import { OFFICER_ROLES, OPEN_CASE_STATUSES } from "@/lib/transitions";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,13 @@ export default async function Dashboard() {
       return { i, start, termEnd, overdue: termEnd ? daysBetween(termEnd, now) : null };
     })
     .filter((x) => x.termEnd && x.termEnd <= now);
+
+  // U2 — chains with a coverage gap, amount drop or missing lien, linked to their latest instrument.
+  const byId = new Map(instruments.map((i) => [i.id, i]));
+  const chainAlerts = allChains(nodes)
+    .map(analyzeChain)
+    .filter((a) => a.gaps.length || a.amountDrops.length || a.lienBreaks.length)
+    .map((a) => ({ a, latest: byId.get(a.nodes[a.nodes.length - 1].id)! }));
 
   const ages = openCases.map((c) => daysBetween(c.openedAt, now));
   const buckets = BUCKETS.map((b, idx) => ({ ...b, n: ages.filter((a) => a <= b.max && (idx === 0 || a > BUCKETS[idx - 1].max)).length }));
@@ -139,6 +146,36 @@ export default async function Dashboard() {
                     <div className="text-right">
                       <div className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", d! <= 7 ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900")}>in {d} days</div>
                       <div className="mt-0.5 text-xs text-muted-foreground">{fmtDate(m)}</div>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Renewal chain alerts" icon={RefreshCw} description="Chains with a coverage gap, an amount drop or a missing lien · opens the latest FDR's chain X-ray" bodyClassName="p-0">
+          {chainAlerts.length === 0 ? (
+            <EmptyState icon={CheckCircle2} title="Every renewal chain is continuous" />
+          ) : (
+            <ul className="divide-y">
+              {chainAlerts.map(({ a, latest }) => (
+                <li key={latest.id}>
+                  <Link href={`/institution/instruments/${latest.id}?tab=chain`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 hover:bg-muted/40">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{latest.institution.name}</div>
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {latest.code} · {a.nodes.length} link{a.nodes.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1.5 text-xs font-semibold">
+                      {a.gaps.length > 0 && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-red-800">{a.totalGapDays}-day gap</span>}
+                      {a.amountDrops.map((d) => (
+                        <span key={d.toId} className="rounded-full bg-red-100 px-2.5 py-0.5 text-red-800">
+                          {formatLakh(d.fromPaise.toString())} → {formatLakh(d.toPaise.toString())}
+                        </span>
+                      ))}
+                      {a.lienBreaks.length > 0 && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-red-800">Lien missing</span>}
                     </div>
                   </Link>
                 </li>
