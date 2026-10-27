@@ -20,7 +20,7 @@ A verification-first portal for the security deposits / Fixed Deposit Receipts t
 | U2 | **Renewal chain X-ray:** a timeline of the chain, with automatic checks for coverage gaps, amount drops and missing liens | FDR Passport → Renewal chain |
 | U3 | **Account Aggregator bank verification:** an `AAProvider` interface returning the TERM_DEPOSIT shape. The MVP uses a **Mock AA sandbox**; Setu/Finvu come in Phase 4. | "Fetch bank confirmation" |
 | U4 | **Verifiable NOC:** SHA-256 anchored at issue, QR on the letter, a public `/verify/:code` page, revocation, and a byte-level tamper check | `/noc/:code`, `/verify/:code` |
-| U5 | **APH rules + penalty engine:** versioned JSON rules (term, 15-day affidavit window, 10% / 20% late tiers, lease doubling, 10% / 50% release deductions). Every deduction shows its rule reference. | Release case → Penalty |
+| U5 | **APH rules + penalty engine:** versioned JSON rules checked against the APH 2024-27 text: the Table 1.4 deposit per programme and level, lease doubling, the Government / aided exemption, the 15-day Affidavit 3 window with 10% / 20% late tiers, and release deductions of 50% (no EoA for six years, cl. 2.21(i)) or 10% (late closure documents, cl. 2.21(h); early encashment, cl. 7.7). The public `/policy` rule register quotes the clause and page for each rule and flags the handbook-vs-guidelines conflict (20% vs 50%). | Release case → Penalty; `/policy` |
 | U6 | **Institution risk score:** 40·late renewals + 30·gap days/30 + 20·open discrepancies + 10·overdue cases (cap 100). The queue is sorted by it. | `/officer`, dashboard |
 | U7 | **Unclaimed matured deposits finder:** deposits past their 10-year term with no release application, plus a one-click notice draft | Dashboard |
 | U8 | **"Why is this pending?":** for every open case, the blocking step, owner, days pending, next action and evidence | Passport, case review, queue |
@@ -70,7 +70,7 @@ Run `npm run db:seed` first. Dates are relative to the day you seed.
 4. **Validity tracking / approaching maturity.** Open the **Dashboard**: expiring in ≤ 30 days, the aging chart, and the unclaimed matured list with **Draft notice**.
    - Click **Run maturity job** (the same as `GET /api/cron/maturity`). Reminders are created; running it again creates none.
 5. **Authorized release + tamper evidence.** Open Konkan's release case. "Why pending" reports *Legal cell, 18 days, SLA breached*.
-   - Sign in as *Rohini Kulkarni* (Legal) and click **Clear**. The penalty engine applies **10%** (late affidavit, APH §1.12).
+   - Sign in as *Rohini Kulkarni* (Legal) and click **Clear**. The penalty engine applies **10%** because Konkan filed its closure documents late (APH cl. 2.21(h)).
    - Sign in as *Dr. S. Raghavan*, click **Approve release**, then **Issue lien-release NOC**.
    - Open the NOC letter and scan or click its QR to reach `/verify/:code`, which shows **Valid**.
    - Click **Flip one byte & re-check** to see a **hash mismatch**. A seeded revoked NOC shows as **Revoked**.

@@ -163,15 +163,8 @@ export async function decideClearance(user: User, caseId: string, cell: Cell, de
     const statuses = c.clearances.map((x) => (x.id === cl.id ? decision : x.status));
     if (statuses.every((s) => s === "CLEARED")) {
       const ins = c.instrument;
-      const aff = ins.documents.find((d) => d.kind === "AFFIDAVIT_3");
-      const lateAffidavit = !!(ins.affidavitDueAt && (!aff || aff.createdAt > ins.affidavitDueAt));
       const p = releasePenalty(
-        {
-          lastEoaYear: ins.institution.lastEoaYear,
-          asOf: now,
-          lateAffidavit,
-          openHighDiscrepancies: ins.discrepancies.filter((d) => d.severity === "HIGH").length,
-        },
+        { lastEoaYear: ins.institution.lastEoaYear, asOf: now, closureDocsLapsed: ins.institution.closureDocsLapsed, encashedBeforeMaturity: false },
         rules,
       );
       const principal = BigInt(String(effectiveValue(tierFieldsOf(ins).amount) ?? "0"));

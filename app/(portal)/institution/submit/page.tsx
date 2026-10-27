@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { formatINR } from "@/lib/format";
 import { SAMPLE_DOCS } from "@/lib/sample-specs";
 import { bestEvidence, effectiveValue, normalize, tierFieldsOf } from "@/lib/provenance";
-import { requiredAmount } from "@/lib/rules";
+import { requiredAmountDetail } from "@/lib/rules";
 import { requirePageUser } from "@/lib/session";
 import { getActiveRules } from "@/lib/services/core";
 
@@ -41,7 +41,12 @@ export default async function SubmitPage({ searchParams }: { searchParams: Promi
       };
     });
 
-  const required = requiredAmount(inst, rules);
+  const req = requiredAmountDetail(inst, rules);
+  const required = req.paise;
+  const basis =
+    req.basis === "TABLE_1_4"
+      ? `${req.lines.map((l) => `${l.label} ₹${l.lakh} L`).join(" + ")}${inst.isLeased ? ", doubled for leased premises" : ""} (${rules.depositTableRef})`
+      : req.ref;
 
   return (
     <>
@@ -49,7 +54,7 @@ export default async function SubmitPage({ searchParams }: { searchParams: Promi
         crumbs={[{ label: "My deposits", href: "/institution" }, { label: "Submit instrument" }]}
         eyebrow="Guided submission"
         title="Submit a security deposit"
-        subtitle={`${inst.name} · required ${formatINR(required)} (${inst.programmes} programmes${inst.isLeased ? ", doubled for leased premises" : ""}; rules ${version})`}
+        subtitle={`${inst.name} · required ${formatINR(required)}: ${basis} · rules ${version}`}
       />
       <SubmitWizard
         predecessors={predecessors}

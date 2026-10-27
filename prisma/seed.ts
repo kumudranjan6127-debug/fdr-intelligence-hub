@@ -6,7 +6,7 @@ import { anchor, hashJson } from "../lib/hash";
 import { addDays, startOfDayUTC, toDay } from "../lib/format";
 import { FIELD_KEYS, makeField, tierFieldsOf, type Confirmed, type FieldKey, type FieldValue } from "../lib/provenance";
 import { bankEvidence, evidenceKeys } from "../lib/evidence";
-import { DEFAULT_RULES, penaltyAmount } from "../lib/rules";
+import { DEFAULT_RULES, penaltyAmount, type ProgrammeLevel } from "../lib/rules";
 import { makeAffidavitPdf, makeFdrPdf, makeOnlineReceiptPdf } from "../lib/samples";
 import { SAMPLE_DOCS } from "../lib/sample-specs";
 import { parseFdrText } from "../lib/extract";
@@ -50,6 +50,24 @@ const INSTITUTIONS = {
   gcpShimla: { name: "Government College of Pharmacy, Shimla", state: "Himachal Pradesh", ro: RO.N, pid: "1-1000588102", trust: "Government of Himachal Pradesh", leased: false, govt: true, eoa: 2026 },
 } as const;
 type InstKey = keyof typeof INSTITUTIONS;
+
+/** Programme mix for APH Table 1.4. Pharmacy and Architecture are not in the table, so those stay on the labelled fallback. */
+const ENG_UG_PG: ProgrammeLevel[] = [{ discipline: "ENGINEERING_TECHNOLOGY", level: "UG" }, { discipline: "ENGINEERING_TECHNOLOGY", level: "PG" }];
+const PROGRAMMES: Partial<Record<InstKey, ProgrammeLevel[]>> = {
+  shivneri: ENG_UG_PG,
+  narmada: ENG_UG_PG,
+  sundarbans: ENG_UG_PG,
+  hooghly: ENG_UG_PG,
+  aravalli: ENG_UG_PG,
+  brahmaputra: ENG_UG_PG,
+  ganga: [{ discipline: "MANAGEMENT", level: "UG" }, { discipline: "MANAGEMENT", level: "PG" }],
+  konkan: [{ discipline: "HMCT", level: "DIPLOMA" }, { discipline: "HMCT", level: "UG" }],
+  deccan: [{ discipline: "ENGINEERING_TECHNOLOGY", level: "DIPLOMA" }],
+  gpNagpur: [{ discipline: "ENGINEERING_TECHNOLOGY", level: "DIPLOMA" }],
+  gecBbsr: ENG_UG_PG,
+};
+/** Konkan closed a programme but filed the closure documents late: APH cl. 2.21(h) deducts 10% at release. */
+const CLOSURE_DOCS_LAPSED = new Set<InstKey>(["konkan"]);
 
 type UserSpec = { key: string; name: string; email: string; role: Role; designation: string; inst?: InstKey; bank?: BankKey; cell?: Cell };
 const USERS: UserSpec[] = [
@@ -230,7 +248,7 @@ const SPECS: Spec[] = [
     status: "RELEASE_REQUESTED",
     confirmed: true,
     openCase: { type: "RELEASE", status: "CLEARANCES_PENDING", opened: -25, changed: -18 },
-    note: "release: Finance + Grievance cleared, Legal pending",
+    note: "release: Finance + Grievance cleared, Legal pending; 10% deduction for lapsed closure documents (APH cl. 2.21(h))",
   },
   {
     key: "K2",
@@ -337,7 +355,7 @@ async function main() {
   await wipe();
 
   await db.ruleSet.create({
-    data: { version: "APH-2024-27-v1", effectiveFrom: new Date("2024-04-01T00:00:00Z"), rules: DEFAULT_RULES as unknown as Prisma.InputJsonValue, approvedBy: "Member Secretary, AICTE (demo)" },
+    data: { version: "APH-2024-27-v2", effectiveFrom: new Date("2024-04-01T00:00:00Z"), rules: DEFAULT_RULES as unknown as Prisma.InputJsonValue, approvedBy: "Member Secretary, AICTE (demo)" },
   });
 
   for (const [k, b] of Object.entries(BANKS)) ids.bank[k as BankKey] = (await db.bank.create({ data: { name: b.name, ifscPrefix: b.ifscPrefix } })).id;
@@ -345,7 +363,18 @@ async function main() {
   for (const [k, i] of Object.entries(INSTITUTIONS)) {
     ids.inst[k as InstKey] = (
       await db.institution.create({
-        data: { name: i.name, state: i.state, regionalOffice: i.ro, permanentId: i.pid, isGovernment: i.govt, isLeased: i.leased, programmes: 2, lastEoaYear: i.eoa },
+        data: {
+          name: i.name,
+          state: i.state,
+          regionalOffice: i.ro,
+          permanentId: i.pid,
+          isGovernment: i.govt,
+          isLeased: i.leased,
+          programmes: 2,
+          programmeLevels: (PROGRAMMES[k as InstKey] ?? []) as unknown as Prisma.InputJsonValue,
+          closureDocsLapsed: CLOSURE_DOCS_LAPSED.has(k as InstKey),
+          lastEoaYear: i.eoa,
+        },
       })
     ).id;
   }

@@ -150,6 +150,10 @@ model Institution {
   isGovernment   Boolean      @default(false)
   isLeased       Boolean      @default(false)
   programmes     Int          @default(1)
+  /// [{ discipline, level }] for APH Table 1.4; empty means not on record (illustrative fallback)
+  programmeLevels Json        @default("[]")
+  /// Closure applied for, but the mandatory documents were not submitted within the programme duration (APH cl. 2.21(h))
+  closureDocsLapsed Boolean   @default(false)
   lastEoaYear    Int?
   riskScore      Float        @default(0)
   riskBreakdown  Json?

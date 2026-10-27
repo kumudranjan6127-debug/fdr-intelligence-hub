@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BadgeCheck, Clock, FileSearch, ScanSearch, ShieldCheck, Workflow } from "lucide-react";
 import { PageHeader, PublicShell } from "@/components/app-shell";
 import { EmptyState, Section, StatCard } from "@/components/ui-kit";
@@ -136,6 +137,13 @@ export default async function MetricsPage() {
           <ul className="list-disc space-y-1.5 pl-4 text-sm leading-relaxed">
             <li>The dataset is synthetic, and the documents are clean machine-generated PDFs. Scanned or photographed documents (OCR) are not covered yet.</li>
             <li>Bank values come from the sandbox bank book, not a live Account Aggregator.</li>
+            <li>
+              The penalty and deposit rules are checked separately against the handbook: see the{" "}
+              <Link href="/policy" className="font-medium text-primary hover:underline">
+                rule register
+              </Link>
+              .
+            </li>
             <li>
               Reproduce with <code className="rounded bg-muted px-1 font-mono text-xs">npm run eval</code>, or <code className="rounded bg-muted px-1 font-mono text-xs">npm run eval -- --workflow</code>{" "}
               with a throwaway <code className="rounded bg-muted px-1 font-mono text-xs">TEST_DATABASE_URL</code>. The full report is in <code className="font-mono text-xs">eval/REPORT.md</code>.

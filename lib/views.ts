@@ -94,12 +94,7 @@ export async function loadInstrument(id: string) {
 /** Penalty preview for a release case, with the rule reference (U5). */
 export function penaltyPreview(c: CaseForWhy, rules: Awaited<ReturnType<typeof getActiveRules>>["rules"], now = new Date()) {
   const ins = c.instrument;
-  const aff = ins.documents.find((d) => d.kind === "AFFIDAVIT_3");
-  const lateAffidavit = !!(ins.affidavitDueAt && (!aff || aff.createdAt > ins.affidavitDueAt));
-  const p = releasePenalty(
-    { lastEoaYear: ins.institution.lastEoaYear, asOf: now, lateAffidavit, openHighDiscrepancies: ins.discrepancies.filter((d) => d.severity === "HIGH").length },
-    rules,
-  );
+  const p = releasePenalty({ lastEoaYear: ins.institution.lastEoaYear, asOf: now, closureDocsLapsed: ins.institution.closureDocsLapsed, encashedBeforeMaturity: false }, rules);
   const principal = BigInt(String(effectiveValue(tierFieldsOf(ins).amount) ?? "0"));
   const deduction = penaltyAmount(principal, p.pct);
   return { ...p, principal, deduction, payable: principal - deduction };

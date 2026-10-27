@@ -57,26 +57,51 @@ describe("provenance", () => {
   });
 });
 
-describe("rules", () => {
-  it("doubles the required amount for leased premises and exempts government institutions", () => {
-    expect(requiredAmount({ programmes: 2, isLeased: false, isGovernment: false })).toBe(BigInt(L(50)));
-    expect(requiredAmount({ programmes: 2, isLeased: true, isGovernment: false })).toBe(BigInt(L(100)));
-    expect(requiredAmount({ programmes: 2, isLeased: true, isGovernment: true })).toBe(0n);
+describe("rules (APH 2024-27)", () => {
+  const eng = (level: "DIPLOMA" | "UG" | "PG") => ({ discipline: "ENGINEERING_TECHNOLOGY" as const, level });
+  it("sums Table 1.4 per programme and level, doubles it for leased premises, exempts government", () => {
+    const base = { programmes: 2, isLeased: false, isGovernment: false };
+    expect(requiredAmount({ ...base, programmeLevels: [eng("UG"), eng("PG")] })).toBe(BigInt(L(50))); // 35 + 15
+    expect(requiredAmount({ ...base, programmeLevels: [{ discipline: "MANAGEMENT", level: "UG" }, { discipline: "MANAGEMENT", level: "PG" }] })).toBe(BigInt(L(20))); // 5 + 15
+    expect(requiredAmount({ ...base, isLeased: true, programmeLevels: [eng("DIPLOMA")] })).toBe(BigInt(L(30)));
+    expect(requiredAmount({ ...base, isGovernment: true, programmeLevels: [eng("UG")] })).toBe(0n);
   });
-  it("applies the late-affidavit tiers", () => {
+  it("labels the per-programme fallback as illustrative when the programme mix is unknown", async () => {
+    const { requiredAmountDetail } = await import("@/lib/rules");
+    const d = requiredAmountDetail({ programmes: 2, isLeased: false, isGovernment: false });
+    expect(d.basis).toBe("FALLBACK");
+    expect(d.ref).toMatch(/Illustrative/);
+    expect(requiredAmountDetail({ programmes: 1, isLeased: false, isGovernment: false, programmeLevels: [eng("UG")] }).ref).toMatch(/Table 1\.4/);
+  });
+  it("applies the late-affidavit tiers of cl. 2.25(f)", () => {
     const intimation = new Date("2026-04-01T00:00:00Z");
     expect(affidavitPenalty(intimation, new Date("2026-04-10T00:00:00Z")).kind).toBe("ON_TIME");
     expect(affidavitPenalty(intimation, new Date("2026-05-20T00:00:00Z")).pct).toBe(10);
     expect(affidavitPenalty(intimation, new Date("2026-07-15T00:00:00Z")).pct).toBe(20);
     expect(affidavitPenalty(intimation, new Date("2026-08-15T00:00:00Z")).kind).toBe("WITHDRAWN");
   });
-  it("picks the highest single release deduction with its rule reference", () => {
-    const eoa = releasePenalty({ lastEoaYear: 2020, asOf: NOW, lateAffidavit: true, openHighDiscrepancies: 0 });
-    expect(eoa.pct).toBe(50);
-    expect(eoa.ruleRef).toMatch(/§2\.16/);
-    expect(releasePenalty({ lastEoaYear: 2026, asOf: NOW, lateAffidavit: true, openHighDiscrepancies: 0 }).pct).toBe(10);
-    expect(releasePenalty({ lastEoaYear: 2026, asOf: NOW, lateAffidavit: false, openHighDiscrepancies: 0 }).pct).toBe(0);
+  it("deducts 50% after six years without EoA (cl. 2.21(i)), not after five", () => {
+    const ctx = { asOf: NOW, closureDocsLapsed: false, encashedBeforeMaturity: false };
+    const six = releasePenalty({ ...ctx, lastEoaYear: 2020 });
+    expect(six.pct).toBe(50);
+    expect(six.ruleRef).toMatch(/2\.21\(i\)/);
+    expect(releasePenalty({ ...ctx, lastEoaYear: 2021 }).pct).toBe(0);
+  });
+  it("deducts 10% for lapsed closure documents (cl. 2.21(h)) or early encashment (cl. 7.7), never both", () => {
+    const ctx = { asOf: NOW, lastEoaYear: 2026, encashedBeforeMaturity: false };
+    expect(releasePenalty({ ...ctx, closureDocsLapsed: true })).toMatchObject({ pct: 10, ruleRef: expect.stringMatching(/2\.21\(h\)/) });
+    expect(releasePenalty({ ...ctx, closureDocsLapsed: false, encashedBeforeMaturity: true })).toMatchObject({ pct: 10, ruleRef: expect.stringMatching(/7\.7/) });
+    expect(releasePenalty({ ...ctx, closureDocsLapsed: true, encashedBeforeMaturity: true }).pct).toBe(10);
+    expect(releasePenalty({ ...ctx, closureDocsLapsed: false }).pct).toBe(0);
     expect(penaltyAmount(BigInt(L(50)), 10)).toBe(BigInt(L(5)));
+  });
+  it("cites a handbook clause and page for every verified rule and flags the 20% / 50% conflict", async () => {
+    const { RULE_REGISTER } = await import("@/lib/rules");
+    for (const r of RULE_REGISTER.filter((x) => x.status === "VERIFIED" || x.status === "CONFLICT")) {
+      expect(r.sources.length, r.id).toBeGreaterThan(0);
+      expect(r.sources[0].clause, r.id).not.toBe("");
+    }
+    expect(RULE_REGISTER.find((r) => r.id === "late-affidavit")?.status).toBe("CONFLICT");
   });
 });
 

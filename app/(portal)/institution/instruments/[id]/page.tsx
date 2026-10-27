@@ -348,7 +348,7 @@ export default async function PassportPage({ params, searchParams }: { params: P
                   <input type="checkbox" name="useSpecimen" defaultChecked /> Attach generated specimens for any left empty (demo)
                 </label>
                 <Textarea name="note" rows={2} placeholder="Request letter / note" />
-                <p className="text-xs text-muted-foreground">Deductions of 10% or 50% may apply (APH §1.12 / §2.16).</p>
+                <p className="text-xs text-muted-foreground">Deductions of 10% or 50% may apply (APH cl. 2.21(h)–(i), 7.7).</p>
                 <SubmitButton className="w-full">Submit release application</SubmitButton>
               </ActionForm>
             </Section>

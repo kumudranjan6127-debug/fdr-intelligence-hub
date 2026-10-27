@@ -39,7 +39,7 @@ application for its release has been received.
 You may apply online for release under APH §6.46 ("Release of Security Deposit") with: the request
 letter, Affidavit-6, a copy of the FDR / payment proof, the latest LoA / EoA, and clearances from the
 AICTE Finance, Legal and Grievance cells. Only the principal is released to the Trust; interest accrued
-on the deposit belongs to AICTE. Deductions under APH §1.12 / §2.16 may apply.
+on the deposit belongs to AICTE. Deductions under APH cl. 2.21(h)–(i) or 7.7 may apply.
 
 Please apply within 30 days of this notice, or inform this office if the deposit is to be continued.
 

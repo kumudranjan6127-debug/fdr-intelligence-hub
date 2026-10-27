@@ -143,7 +143,7 @@ export function detectDiscrepancies(input: DiscrepancyInput): DetectedDiscrepanc
       code: "MISSING_AFFIDAVIT",
       field: "documents",
       severity: "MED",
-      message: `Affidavit was due by ${fmtDate(ins.affidavitDueAt)} and has not been uploaded (APH §1.12: 15 days from intimation)`,
+      message: `Affidavit was due by ${fmtDate(ins.affidavitDueAt)} and has not been uploaded (APH cl. 2.25(f): 15 days from intimation)`,
       evidence: { dueAt: ins.affidavitDueAt.toISOString() },
     });
   }

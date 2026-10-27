@@ -72,7 +72,7 @@ export async function runMaturityJob(db: PrismaClient, now = new Date()): Promis
     },
   });
   for (const ins of affidavitDue) {
-    await remind(ins.id, ins.code, [], "AFFIDAVIT_DUE", ins.affidavitDueAt!, `Affidavit for ${ins.code} is due by ${fmtDate(ins.affidavitDueAt)}. Late submission attracts 10% / 20% penalty (APH §1.12).`);
+    await remind(ins.id, ins.code, [], "AFFIDAVIT_DUE", ins.affidavitDueAt!, `Affidavit for ${ins.code} is due by ${fmtDate(ins.affidavitDueAt)}. Late submission attracts 10% / 20% penalty (APH cl. 2.25(f)).`);
   }
 
   const all = await db.instrument.findMany({ select: { id: true, institutionId: true } });

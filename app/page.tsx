@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 
 const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Landmark, title: "Bank confirmation via Account Aggregator", body: "An AAProvider interface returning the TERM_DEPOSIT shape. Mock AA sandbox today; Setu / Finvu in Phase 4." },
-  { icon: Scale, title: "APH rules and penalty engine", body: "Versioned rules for term, affidavit window, late tiers and release deductions. Every deduction cites its rule." },
+  { icon: Scale, title: "APH rules and penalty engine", body: "Versioned rules for the deposit table, affidavit window, late tiers and release deductions, each checked against the handbook clause and page." },
   { icon: TrendingUp, title: "Institution risk score", body: "Late renewals, gap days, open discrepancies and overdue cases roll into one score. The queue is sorted by it." },
   { icon: Wallet, title: "Unclaimed deposit finder", body: "Deposits past their 10-year term with no release application, with a one-click notice draft." },
   { icon: Hourglass, title: "“Why is this pending?”", body: "Every open case names its blocking step, owner, days pending and the next action." },
@@ -117,6 +117,7 @@ export default async function Landing() {
             <a href="#how" className="hover:text-foreground">How it works</a>
             <a href="#honest" className="hover:text-foreground">Honest boundaries</a>
             <Link href="/metrics" className="hover:text-foreground">Results</Link>
+            <Link href="/policy" className="hover:text-foreground">Rules</Link>
             <Link href="/verify" className="hover:text-foreground">Verify a NOC</Link>
           </nav>
           <Link href={cta.href} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
