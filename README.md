@@ -33,6 +33,16 @@ Also included:
 - a server-side state machine (`lib/transitions.ts`)
 - role checks on every action, and Zod on every input
 
+## Measured results
+
+`npm run eval` builds a seeded, labelled dataset of 210 cases: clean deposits, format variants and nine planted defect types. Each case gets a real generated PDF, real text extraction and the production engines. Adding `-- --workflow` also drives 30 cases through the real services on a throwaway database. The latest report is in [eval/REPORT.md](eval/REPORT.md) and on the public `/metrics` page:
+
+- 110 of 110 planted defects caught
+- 0 of 70 correct deposits flagged
+- 30 of 30 workflows completed as expected
+
+The first run found that the near-duplicate rule flagged unrelated same-day ₹50 L deposits, and the rule was tightened. The limits are that the documents are synthetic, OCR is not covered, and bank values come from the sandbox.
+
 ## Honest boundaries
 
 - **A matching hash proves a record is *unchanged*, not that a bank issued it.** Authenticity comes from the bank (Account Aggregator / bank portal). The UI and the NOC letter both say so.

@@ -116,6 +116,7 @@ export default async function Landing() {
             <a href="#features" className="hover:text-foreground">Features</a>
             <a href="#how" className="hover:text-foreground">How it works</a>
             <a href="#honest" className="hover:text-foreground">Honest boundaries</a>
+            <Link href="/metrics" className="hover:text-foreground">Results</Link>
             <Link href="/verify" className="hover:text-foreground">Verify a NOC</Link>
           </nav>
           <Link href={cta.href} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
@@ -406,7 +407,13 @@ export default async function Landing() {
           <div>
             <Eyebrow>Honest boundaries</Eyebrow>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight">What is real, and what is a sandbox.</h2>
-            <p className="mt-4 text-muted-foreground">A prototype should say where it stops. The portal labels each of these in the interface too.</p>
+            <p className="mt-4 text-muted-foreground">
+              A prototype should say where it stops. The portal labels each of these in the interface too, and a reproducible evaluation reports what the engines actually catch:{" "}
+              <Link href="/metrics" className="font-medium text-primary hover:underline">
+                see the measured results
+              </Link>
+              .
+            </p>
             <ul className="mt-8 space-y-3">
               {HONEST.map((h) => (
                 <li key={h} className="flex gap-3 text-sm leading-relaxed">

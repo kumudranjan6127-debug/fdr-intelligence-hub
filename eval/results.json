@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-10-27T19:50:38.808Z",
+  "commit": "f104b2b",
+  "seed": 26265,
+  "cases": 210,
+  "detection": {
+    "byLabel": [
+      {
+        "label": "CLEAN",
+        "n": 50,
+        "flagged": 0,
+        "falsePositiveRate": 0
+      },
+      {
+        "label": "FORMAT_VARIANT",
+        "n": 20,
+        "flagged": 0,
+        "falsePositiveRate": 0
+      },
+      {
+        "label": "AMOUNT_MISMATCH",
+        "expected": "CLAIMED_VS_CONFIRMED",
+        "n": 15,
+        "detected": 15,
+        "recall": 100
+      },
+      {
+        "label": "FDR_NUMBER_MISMATCH",
+        "expected": "CLAIMED_VS_CONFIRMED",
+        "n": 15,
+        "detected": 15,
+        "recall": 100
+      },
+      {
+        "label": "LIEN_MISSING",
+        "expected": "LIEN_NOT_NOTED",
+        "n": 15,
+        "detected": 15,
+        "recall": 100
+      },
+      {
+        "label": "COVERAGE_GAP",
+        "expected": "COVERAGE_GAP",
+        "n": 15,
+        "detected": 15,
+        "recall": 100
+      },
+      {
+        "label": "AMOUNT_DROP",
+        "expected": "AMOUNT_DROP",
+        "n": 15,
+        "detected": 15,
+        "recall": 100
+      },
+      {
+        "label": "BELOW_REQUIRED",
+        "expected": "BELOW_REQUIRED",
+        "n": 5,
+        "detected": 5,
+        "recall": 100
+      },
+      {
+        "label": "DUPLICATE_DOCUMENT",
+        "expected": "DUPLICATE_DOCUMENT",
+        "n": 10,
+        "detected": 10,
+        "recall": 100
+      },
+      {
+        "label": "DUPLICATE_FDR_NUMBER",
+        "expected": "DUPLICATE_FDR_NUMBER",
+        "n": 10,
+        "detected": 10,
+        "recall": 100
+      },
+      {
+        "label": "NEAR_DUPLICATE",
+        "expected": "NEAR_DUPLICATE_FDR",
+        "n": 10,
+        "detected": 10,
+        "recall": 100
+      }
+    ],
+    "overall": {
+      "defectiveCases": 110,
+      "detected": 110,
+      "recall": 100,
+      "cleanCases": 70,
+      "cleanFlagged": 0,
+      "partnerCases": 30,
+      "partnersFlagged": 30,
+      "alarms": 235,
+      "wrongAlarms": 0,
+      "alarmPrecision": 100
+    },
+    "extractionAccuracy": {
+      "bankName": 100,
+      "fdrNumber": 100,
+      "amount": 100,
+      "issueDate": 100,
+      "maturityDate": 100,
+      "lienNoted": 100
+    },
+    "timingMs": {
+      "extractionP50": 6,
+      "extractionP95": 10.6,
+      "detectionP50": 0.5,
+      "detectionP95": 1.1,
+      "documents": 240
+    },
+    "misses": []
+  },
+  "workflow": {
+    "cases": 30,
+    "completedAsExpected": 30,
+    "completionRate": 100,
+    "perCaseMs": {
+      "p50": 3400.3,
+      "p95": 4348.9
+    },
+    "auditChainIntact": true,
+    "failures": []
+  }
+}
