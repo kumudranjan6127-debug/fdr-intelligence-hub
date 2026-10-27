@@ -1,20 +1,36 @@
-// MVP auth: a cookie holding the seeded user's id ("sign in as"). Real auth is Phase 2.
-// UI hides what a role can't do; every server action re-checks the role here.
+// Sessions: an HMAC-signed cookie (lib/auth.ts) naming the user, issued after a password check or, with
+// DEMO_MODE=1, a one-click demo sign-in. UI hides what a role can't do; every server action re-checks the role here.
 import "server-only";
 import type { Role } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { SESSION_HOURS, readSession, sessionSecret, signSession } from "./auth";
 import { db } from "./db";
 import { AuthError } from "./errors";
 
 export { AuthError };
 
-export const SESSION_COOKIE = "fdr_uid";
+export const SESSION_COOKIE = "fdr_session";
 
 export async function currentUser() {
-  const id = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!id) return null;
-  return db.user.findUnique({ where: { id }, include: { institution: true, bank: true } });
+  const session = readSession((await cookies()).get(SESSION_COOKIE)?.value, sessionSecret());
+  if (!session) return null;
+  return db.user.findUnique({ where: { id: session.uid }, include: { institution: true, bank: true } });
+}
+
+export async function startSession(userId: string) {
+  const exp = Date.now() + SESSION_HOURS * 3600_000;
+  (await cookies()).set(SESSION_COOKIE, signSession({ uid: userId, exp }, sessionSecret()), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(exp),
+  });
+}
+
+export async function endSession() {
+  (await cookies()).delete(SESSION_COOKIE);
 }
 
 export type SessionUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;

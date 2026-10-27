@@ -131,6 +131,9 @@ model User {
   institution   Institution? @relation(fields: [institutionId], references: [id])
   bankId        String?
   bank          Bank?        @relation(fields: [bankId], references: [id])
+  passwordHash  String?
+  failedLogins  Int          @default(0)
+  lockedUntil   DateTime?
   createdAt     DateTime     @default(now())
 
   documents Document[]

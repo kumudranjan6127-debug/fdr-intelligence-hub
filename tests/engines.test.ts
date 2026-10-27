@@ -234,3 +234,37 @@ describe("local extraction fallback", () => {
     expect(valuesEqual("bankName", r.fields.bankName.value, "Deccan Commercial Bank")).toBe(true);
   });
 });
+
+describe("auth", () => {
+  it("hashes and verifies passwords", async () => {
+    const { hashPassword, verifyPassword } = await import("@/lib/auth");
+    const h = hashPassword("Demo@26265");
+    expect(h.startsWith("scrypt$")).toBe(true);
+    expect(verifyPassword("Demo@26265", h)).toBe(true);
+    expect(verifyPassword("demo@26265", h)).toBe(false);
+    expect(verifyPassword("x", null)).toBe(false);
+    expect(hashPassword("same")).not.toBe(hashPassword("same")); // salted
+  });
+
+  it("rejects forged, tampered and expired sessions", async () => {
+    const { readSession, signSession } = await import("@/lib/auth");
+    const now = Date.UTC(2026, 9, 27);
+    const token = signSession({ uid: "user_a", exp: now + 1000 }, "secret");
+    expect(readSession(token, "secret", now)?.uid).toBe("user_a");
+    expect(readSession(token, "other-secret", now)).toBeNull();
+    const [, mac] = token.split(".");
+    const swapped = `${Buffer.from(JSON.stringify({ uid: "authority", exp: now + 1000 })).toString("base64url")}.${mac}`;
+    expect(readSession(swapped, "secret", now)).toBeNull();
+    expect(readSession(token, "secret", now + 2000)).toBeNull();
+    expect(readSession("user_a", "secret", now)).toBeNull(); // the old raw-id cookie
+  });
+
+  it("gates demo sign-in on DEMO_MODE", async () => {
+    const { isDemoMode, sessionSecret } = await import("@/lib/auth");
+    expect(isDemoMode({})).toBe(false);
+    expect(isDemoMode({ DEMO_MODE: "1" })).toBe(true);
+    expect(sessionSecret({ SESSION_SECRET: "s" })).toBe("s");
+    expect(sessionSecret({ DATABASE_URL: "a" })).not.toBe(sessionSecret({ DATABASE_URL: "b" }));
+    expect(() => sessionSecret({})).toThrow();
+  });
+});

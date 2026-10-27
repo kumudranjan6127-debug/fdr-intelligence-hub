@@ -1,6 +1,5 @@
 "use server";
 // Server actions. Zod on every input; role checks happen server-side in each command.
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -9,7 +8,8 @@ import { db } from "@/lib/db";
 import { AuthError } from "@/lib/errors";
 import { extractFdr, type ExtractionResult } from "@/lib/extract";
 import { makeAffidavitPdf } from "@/lib/samples";
-import { SESSION_COOKIE, homeFor, requireRole } from "@/lib/session";
+import { LOCKOUT_MINUTES, MAX_FAILED_LOGINS, isDemoMode, verifyPassword } from "@/lib/auth";
+import { endSession, homeFor, requireRole, startSession } from "@/lib/session";
 import { storeFile } from "@/lib/storage";
 import { CASE_ACTIONS, TransitionError, type CaseAction } from "@/lib/transitions";
 import { toDay } from "@/lib/format";
@@ -38,15 +38,42 @@ async function guard(fn: () => Promise<string | void>, paths: string[] = []): Pr
 
 // ───────── session ─────────
 
+/** One-click demo sign-in. Allowed only with DEMO_MODE=1; still issues a signed session. */
 export async function signInAs(formData: FormData) {
-  const userId = z.string().min(1).parse(formData.get("userId"));
-  const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-  (await cookies()).set(SESSION_COOKIE, user.id, { httpOnly: true, sameSite: "lax", path: "/", secure: process.env.NODE_ENV === "production" });
+  if (!isDemoMode()) redirect("/login?error=demo-off");
+  const email = z.string().email().parse(formData.get("email"));
+  const user = await db.user.findUniqueOrThrow({ where: { email } });
+  await startSession(user.id);
+  redirect(homeFor(user.role));
+}
+
+/** Email + password. After MAX_FAILED_LOGINS failures the account locks for LOCKOUT_MINUTES. */
+export async function signInWithPassword(formData: FormData) {
+  const parsed = z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1).max(200) }).safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) redirect("/login?error=invalid");
+  const { email, password } = parsed.data;
+  const user = await db.user.findUnique({ where: { email } });
+  if (user?.lockedUntil && user.lockedUntil > new Date()) redirect("/login?error=locked");
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (user) {
+      const failed = user.failedLogins + 1;
+      await db.user.update({
+        where: { id: user.id },
+        data: failed >= MAX_FAILED_LOGINS ? { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCKOUT_MINUTES * 60_000) } : { failedLogins: failed },
+      });
+    }
+    redirect("/login?error=invalid");
+  }
+  if (user.failedLogins || user.lockedUntil) await db.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
+  await startSession(user.id);
   redirect(homeFor(user.role));
 }
 
 export async function signOut() {
-  (await cookies()).delete(SESSION_COOKIE);
+  await endSession();
   redirect("/login");
 }
 

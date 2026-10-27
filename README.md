@@ -37,7 +37,7 @@ Also included:
 - Bank confirmation is the **Mock AA sandbox**. It reads a seeded "bank book" (`BankDepositRecord`) in the same JSON shape a real AA would return. Lien status comes from a mocked bank portal, because the AA term-deposit summary does not include liens.
 - Hashes are **anchored in the database** ("Hash anchored (DB) — ledger in Phase 3"); `LedgerAnchor.txRef` is empty until the EVM anchor lands.
 - **AI extraction never auto-accepts.** With `ANTHROPIC_API_KEY` set, Claude (`claude-opus-5-5`) reads the PDF or image into the *extracted* tier. Without a key, a local text-layer parser does the same for text PDFs and is labelled as such.
-- Sign-in is a **role switcher** with no passwords. Notifications are in-app only. The NOC is a styled HTML letter, not a PDF.
+- Sign-in uses email + password (scrypt hashes, HMAC-signed session cookie, lockout after 5 failures). With `DEMO_MODE=1` the sign-in page also lists the demo accounts for one-click sign-in; turn it off on any non-demo deployment. Notifications are in-app only. The NOC is a styled HTML letter, not a PDF.
 - All institutions, banks, people and documents are **fictional**. Every generated PDF is stamped SPECIMEN. Rule amounts (e.g. ₹25 L per programme) are illustrative and live in the `RuleSet` JSON.
 
 ## Demo script (5 flows, brief §5.6)
@@ -88,6 +88,9 @@ Environment (`.env`):
 | `BLOB_READ_WRITE_TOKEN` | optional | Vercel Blob for uploads. If unset, bytes are stored in Postgres. |
 | `CRON_SECRET` | prod | Protects `/api/cron/maturity` (Vercel Cron sends it as a Bearer token) |
 | `NEXT_PUBLIC_APP_URL` | optional | Absolute URL for NOC QR codes (otherwise taken from the request host) |
+| `DEMO_MODE` | demo | `1` shows the demo accounts for one-click sign-in. Leave unset in production. |
+| `DEMO_PASSWORD` | optional | Password the seed gives every demo account (default `Demo@26265`) |
+| `SESSION_SECRET` | recommended | HMAC key for session cookies. If unset, one is derived from the database URL. |
 
 `npm run samples` regenerates the specimen PDFs in `public/samples/` (byte-stable).
 

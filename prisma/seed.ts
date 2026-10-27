@@ -10,6 +10,7 @@ import { makeAffidavitPdf, makeFdrPdf, makeOnlineReceiptPdf } from "../lib/sampl
 import { SAMPLE_DOCS } from "../lib/sample-specs";
 import { parseFdrText } from "../lib/extract";
 import { sha256Hex } from "../lib/hash";
+import { demoPassword, hashPassword } from "../lib/auth";
 import { syncDiscrepancies, recomputeRisk } from "../lib/services/core";
 import type { NocPayload } from "../lib/services/noc";
 
@@ -332,7 +333,16 @@ async function main() {
 
   for (const u of USERS) {
     const row = await db.user.create({
-      data: { name: u.name, email: u.email, role: u.role, designation: u.designation, cell: u.cell, institutionId: u.inst ? ids.inst[u.inst] : null, bankId: u.bank ? ids.bank[u.bank] : null },
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash: hashPassword(demoPassword()),
+        role: u.role,
+        designation: u.designation,
+        cell: u.cell,
+        institutionId: u.inst ? ids.inst[u.inst] : null,
+        bankId: u.bank ? ids.bank[u.bank] : null,
+      },
     });
     ids.user[u.key] = row.id;
     userRole[u.key] = u.role;

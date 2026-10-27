@@ -60,7 +60,7 @@ const HONEST: string[] = [
   "Hashes are anchored in the database today; the EVM ledger anchor arrives in Phase 3.",
   "A matching hash proves a record is unchanged, not that a bank issued it. Authenticity comes from the bank.",
   "AI extraction never auto-accepts. It fills the Extracted tier and an officer decides.",
-  "Sign-in is a demo role switcher. All institutions, banks, people and documents are fictional and stamped SPECIMEN.",
+  "Demo mode adds one-click sign-in for the demo accounts (still a signed session). All institutions, banks, people and documents are fictional and stamped SPECIMEN.",
 ];
 
 const ROADMAP: [string, string][] = [
@@ -153,7 +153,7 @@ export default async function Landing() {
                 Verify a NOC
               </Link>
             </div>
-            <p className="mt-4 text-xs text-white/55">Demo sign-in, no password · fictional data · Mock AA sandbox</p>
+            <p className="mt-4 text-xs text-white/55">One-click demo accounts · fictional data · Mock AA sandbox</p>
           </div>
 
           {/* product preview */}
