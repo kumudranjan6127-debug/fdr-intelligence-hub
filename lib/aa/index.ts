@@ -34,16 +34,18 @@ export interface AAProvider {
 }
 
 /** Map an FI payload to the `confirmed` tier of each field. */
-export function confirmedFromFI(fi: TermDepositFI, consentId: string): Partial<Record<FieldKey, Confirmed>> {
+export function confirmedFromFI(fi: TermDepositFI, consentId: string, isMock: boolean): Partial<Record<FieldKey, Confirmed>> {
   const at = new Date().toISOString();
-  const c = (value: Confirmed["value"], source = "AA_MOCK"): Confirmed => ({ value, source, fetchedAt: at, ref: consentId });
+  // The source travels with every value, so sandbox data can never be shown or used as genuine bank evidence.
+  const aaSource = isMock ? "AA_MOCK" : "AA_LIVE";
+  const c = (value: Confirmed["value"], source = aaSource): Confirmed => ({ value, source, fetchedAt: at, ref: consentId });
   return {
     bankName: c(fi.fip.name),
     fdrNumber: c(fi.linkedAccRef),
     amount: c(rupeesToPaise(fi.summary.principalAmount)),
     issueDate: c(fi.summary.openingDate),
     maturityDate: c(fi.summary.maturityDate),
-    lienNoted: c(fi.lien.marked && /aicte|all india council/i.test(fi.lien.holder ?? ""), "BANK_PORTAL_MOCK"),
+    lienNoted: c(fi.lien.marked && /aicte|all india council/i.test(fi.lien.holder ?? ""), isMock ? "BANK_PORTAL_MOCK" : "BANK_PORTAL"),
   };
 }
 

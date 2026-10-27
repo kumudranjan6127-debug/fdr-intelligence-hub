@@ -3,6 +3,9 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { anchor, hashJson, sha256Hex } from "../hash";
+import { isDemoMode } from "../auth";
+import { EvidenceError } from "../errors";
+import { bankEvidence, canIssueNocOn, evidenceKeys, type BankEvidence } from "../evidence";
 import { effectiveValue, tierFieldsOf } from "../provenance";
 import { penaltyAmount } from "../rules";
 import { readFile } from "../storage";
@@ -25,6 +28,8 @@ export type NocPayload = {
   payableToTrustPaise: string;
   interest: string;
   documents: { kind: string; sha256: string }[];
+  /** What the bank values rest on. Absent on NOCs issued before evidence controls existed. */
+  bankEvidence?: BankEvidence;
 };
 
 export async function issueNoc(tx: Db, caseId: string, issuer: { id: string; name: string; designation: string | null }, at = new Date()) {
@@ -37,6 +42,10 @@ export async function issueNoc(tx: Db, caseId: string, issuer: { id: string; nam
   const principal = BigInt(String(effectiveValue(f.amount) ?? "0"));
   const pct = c.penaltyPct ? Number(c.penaltyPct) : 0;
   const deduction = penaltyAmount(principal, pct);
+  const evidence = bankEvidence(f, evidenceKeys(ins.type));
+  if (!canIssueNocOn(evidence.level, isDemoMode())) {
+    throw new EvidenceError("A NOC needs genuine bank confirmation. Sandbox (Mock AA) values are accepted only in demo mode.");
+  }
   const code = newCode("NOC", at);
   const bankName = effectiveValue(f.bankName) as string | null;
   const payload: NocPayload = {
@@ -53,6 +62,7 @@ export async function issueNoc(tx: Db, caseId: string, issuer: { id: string; nam
     documents: ins.documents
       .filter((d) => ["FDR_COPY", "AFFIDAVIT_6", "LOA_EOA"].includes(d.kind))
       .map((d) => ({ kind: d.kind, sha256: d.sha256 })),
+    bankEvidence: evidence,
   };
   const sha256 = hashJson(payload);
   const noc = await tx.noc.create({

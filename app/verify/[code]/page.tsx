@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { fmtDate, fmtDateTime, formatINR, humanize } from "@/lib/format";
 import { currentUser } from "@/lib/session";
 import { verifyNoc } from "@/lib/services/noc";
+import { bankEvidenceText } from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Verify NOC" };
@@ -83,6 +84,8 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
             </dd>
             <dt className="text-muted-foreground">Payable to Trust</dt>
             <dd className="font-medium">{formatINR(p.payableToTrustPaise)}</dd>
+            <dt className="text-muted-foreground">Bank evidence</dt>
+            <dd className={p.bankEvidence?.level === "BANK_CONFIRMED" ? "" : "font-medium text-amber-900"}>{bankEvidenceText(p.bankEvidence)}</dd>
             <dt className="text-muted-foreground">Status</dt>
             <dd className={revoked ? "font-medium text-red-700" : "font-medium text-emerald-800"}>{revoked ? `Revoked ${fmtDate(noc.revokedAt)}` : "Not revoked"}</dd>
           </dl>

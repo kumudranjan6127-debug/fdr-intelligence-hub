@@ -374,7 +374,7 @@ export async function fetchBankConfirmation(user: User, instrumentId: string) {
       await recordEvent(tx, { instrumentId, actor, action: "AA_NOT_FOUND", after: { consentId: consent.consentId, provider: aa.name } });
       return;
     }
-    const confirmed = confirmedFromFI(fi, consent.consentId);
+    const confirmed = confirmedFromFI(fi, consent.consentId, aa.isMock);
     const next = { ...f };
     for (const k of FIELD_KEYS) {
       if (ins.type === "ONLINE_DEPOSIT" && k === "lienNoted") continue;

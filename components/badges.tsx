@@ -1,6 +1,6 @@
 // Provenance & status badges. Colour is never the only signal — every badge carries a text label and icon.
 import type { CaseStatus, InstrumentStatus } from "@prisma/client";
-import { AlertTriangle, BadgeCheck, Building2, CircleDashed, FileSearch, Landmark } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Building2, CircleDashed, FileSearch, FlaskConical, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { humanize } from "@/lib/format";
 import type { FieldStatus } from "@/lib/provenance";
@@ -13,6 +13,7 @@ export const TIER_STYLE = {
   EXTRACTED: { cls: "border-blue-300 bg-blue-50 text-blue-900", label: "Extracted", Icon: FileSearch, hint: "Read from the uploaded document by AI" },
   CONFIRMED: { cls: "border-emerald-300 bg-emerald-50 text-emerald-900", label: "Confirmed", Icon: Landmark, hint: "Confirmed by the bank (Mock AA sandbox)" },
   MISMATCH: { cls: "border-red-300 bg-red-50 text-red-900", label: "Mismatch", Icon: AlertTriangle, hint: "Sources disagree" },
+  SANDBOX: { cls: "border-dashed border-slate-400 bg-slate-50 text-slate-700", label: "Sandbox match", Icon: FlaskConical, hint: "Matches the Mock AA sandbox. Not genuine bank evidence." },
 } as const;
 
 export function TierBadge({ tier, className }: { tier: keyof typeof TIER_STYLE; className?: string }) {
@@ -26,10 +27,10 @@ export function TierBadge({ tier, className }: { tier: keyof typeof TIER_STYLE; 
 }
 
 /** Field-level verdict: what's the strongest thing we can say about this field? */
-export function FieldStatusBadge({ status }: { status: FieldStatus }) {
+export function FieldStatusBadge({ status, sandbox }: { status: FieldStatus; sandbox?: boolean }) {
   switch (status) {
     case "CONFIRMED":
-      return <TierBadge tier="CONFIRMED" />;
+      return <TierBadge tier={sandbox ? "SANDBOX" : "CONFIRMED"} />;
     case "MISMATCH":
       return <TierBadge tier="MISMATCH" />;
     case "MATCH":

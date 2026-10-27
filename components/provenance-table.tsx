@@ -1,6 +1,7 @@
 import { FIELD_KEYS, FIELD_LABELS, valuesEqual, type FieldKey, type FieldValue, type TierFields } from "@/lib/provenance";
 import { fmtDate, fmtDateTime, formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { isSandboxSource, sourceLabel } from "@/lib/evidence";
 import { FieldStatusBadge, TierBadge } from "./badges";
 
 export function showValue(key: FieldKey, v: FieldValue): string {
@@ -71,15 +72,18 @@ export function ProvenanceTable({ fields, type }: { fields: TierFields; type: "F
                     <>
                       <div className={cn(coBad && "inline-block rounded-md bg-red-100 px-1.5 py-0.5 -mx-1.5 font-semibold text-red-800")}>{showValue(k, f.confirmed.value)}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">
-                        {f.confirmed.source === "BANK_PORTAL_MOCK" ? "Mock bank portal" : "Mock AA sandbox"} · {fmtDateTime(f.confirmed.fetchedAt)}
+                        {sourceLabel(f.confirmed.source)} · {fmtDateTime(f.confirmed.fetchedAt)}
                       </div>
+                      {isSandboxSource(f.confirmed.source) && (
+                        <div className="mt-1 inline-flex rounded border border-dashed border-slate-400 px-1 text-[10px] font-medium uppercase tracking-wide text-slate-600">Sandbox · not bank evidence</div>
+                      )}
                     </>
                   ) : (
                     <span className="text-muted-foreground">Not confirmed</span>
                   )}
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <FieldStatusBadge status={f.status} />
+                  <FieldStatusBadge status={f.status} sandbox={isSandboxSource(f.confirmed?.source)} />
                 </td>
               </tr>
             );
@@ -93,10 +97,11 @@ export function ProvenanceTable({ fields, type }: { fields: TierFields; type: "F
 /** Segmented bar: how much of this instrument is bank-confirmed vs only claimed. */
 export function ProvenanceBar({ fields, type }: { fields: TierFields; type: "FDR" | "ONLINE_DEPOSIT" }) {
   const keys = keysFor(type);
-  const c = { CONFIRMED: 0, MATCH: 0, UNVERIFIED: 0, MISMATCH: 0 };
-  for (const k of keys) c[fields[k].status]++;
+  const c = { CONFIRMED: 0, SANDBOX: 0, MATCH: 0, UNVERIFIED: 0, MISMATCH: 0 };
+  for (const k of keys) c[fields[k].status === "CONFIRMED" && isSandboxSource(fields[k].confirmed?.source) ? "SANDBOX" : fields[k].status]++;
   const segs = [
     { n: c.CONFIRMED, cls: "bg-emerald-500", label: "bank-confirmed" },
+    { n: c.SANDBOX, cls: "bg-emerald-300", label: "sandbox-confirmed" },
     { n: c.MATCH, cls: "bg-blue-500", label: "doc-matched" },
     { n: c.UNVERIFIED, cls: "bg-amber-400", label: "claim only" },
     { n: c.MISMATCH, cls: "bg-red-500", label: "mismatch" },

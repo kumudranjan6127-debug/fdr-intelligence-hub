@@ -4,7 +4,8 @@ import { PrismaClient, type Cell, type CaseStatus, type CaseType, type DocumentK
 import { recordEvent, type Actor } from "../lib/events";
 import { anchor, hashJson } from "../lib/hash";
 import { addDays, startOfDayUTC, toDay } from "../lib/format";
-import { FIELD_KEYS, makeField, type Confirmed, type FieldKey, type FieldValue } from "../lib/provenance";
+import { FIELD_KEYS, makeField, tierFieldsOf, type Confirmed, type FieldKey, type FieldValue } from "../lib/provenance";
+import { bankEvidence, evidenceKeys } from "../lib/evidence";
 import { DEFAULT_RULES, penaltyAmount } from "../lib/rules";
 import { makeAffidavitPdf, makeFdrPdf, makeOnlineReceiptPdf } from "../lib/samples";
 import { SAMPLE_DOCS } from "../lib/sample-specs";
@@ -652,6 +653,7 @@ async function releaseWithNoc(key: string, o: { opened: number; nocAt: number; c
       payableToTrustPaise: principal.toString(),
       interest: "Accrued interest is payable to AICTE (APH 2024-27 §1.12); only principal returns to the Trust.",
       documents: docs.map((d) => ({ kind: d.kind, sha256: d.sha256 })),
+      bankEvidence: bankEvidence(tierFieldsOf(ins), evidenceKeys(ins.type)),
     };
     const sha256 = hashJson(payload);
     const noc = await db.noc.create({ data: { code, caseId: kase.id, instrumentId: insId, issuedById: ids.user.auth1, issuedAt: at, payload: payload as unknown as Prisma.InputJsonValue, sha256 } });

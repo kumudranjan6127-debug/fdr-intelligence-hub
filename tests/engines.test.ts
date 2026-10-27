@@ -268,3 +268,50 @@ describe("auth", () => {
     expect(() => sessionSecret({})).toThrow();
   });
 });
+
+describe("evidence controls", () => {
+  const conf = (source: string) => ({ value: "x", source, fetchedAt: "2026-10-27T00:00:00Z" });
+  const tf = (source: string | null, status = "CONFIRMED") =>
+    Object.fromEntries(
+      ["bankName", "fdrNumber", "amount", "issueDate", "maturityDate", "lienNoted"].map((k) => [k, { claimed: "x", extracted: null, confirmed: source ? conf(source) : null, status }]),
+    ) as unknown as TierFields;
+
+  it("never treats sandbox values as bank confirmation", async () => {
+    const { evidenceLevel, evidenceKeys, isSandboxSource } = await import("@/lib/evidence");
+    const keys = evidenceKeys("FDR");
+    expect(isSandboxSource("AA_MOCK")).toBe(true);
+    expect(isSandboxSource("BANK_PORTAL_MOCK")).toBe(true);
+    expect(isSandboxSource(undefined)).toBe(true);
+    expect(isSandboxSource("AA_LIVE")).toBe(false);
+    expect(evidenceLevel(tf("AA_MOCK"), keys)).toBe("SANDBOX_ONLY");
+    expect(evidenceLevel(tf("AA_LIVE"), keys)).toBe("BANK_CONFIRMED");
+    expect(evidenceLevel(tf("AA_LIVE", "MISMATCH"), keys)).toBe("SANDBOX_ONLY");
+    expect(evidenceLevel(tf(null, "UNVERIFIED"), keys)).toBe("NONE");
+    const mixed = tf("AA_LIVE");
+    mixed.lienNoted.confirmed = conf("BANK_PORTAL_MOCK") as never;
+    expect(evidenceLevel(mixed, keys)).toBe("SANDBOX_ONLY");
+    expect(evidenceKeys("ONLINE_DEPOSIT")).not.toContain("lienNoted");
+  });
+
+  it("blocks NOCs on sandbox evidence outside demo mode", async () => {
+    const { canIssueNocOn, bankEvidence, evidenceKeys } = await import("@/lib/evidence");
+    expect(canIssueNocOn("SANDBOX_ONLY", false)).toBe(false);
+    expect(canIssueNocOn("NONE", false)).toBe(false);
+    expect(canIssueNocOn("BANK_CONFIRMED", false)).toBe(true);
+    expect(canIssueNocOn("SANDBOX_ONLY", true)).toBe(true);
+    expect(bankEvidence(tf("AA_MOCK"), evidenceKeys("FDR")).note).toMatch(/not a genuine bank confirmation/);
+  });
+
+  it("tags AA values with a mock or live source", async () => {
+    const { confirmedFromFI } = await import("@/lib/aa");
+    const fi = {
+      type: "TERM_DEPOSIT", maskedAccNumber: "X", linkedAccRef: "BUB1", profile: { holders: [] },
+      summary: { accountType: "FIXED", branch: "b", ifsc: "i", openingDate: "2026-01-01", maturityDate: "2029-01-01", principalAmount: "100", interestRate: "7", tenureDays: 1, status: "ACTIVE" },
+      lien: { marked: true, holder: "Member Secretary, AICTE", source: "BANK_PORTAL_MOCK" }, fip: { id: "f", name: "Bank" },
+    } as const;
+    expect(confirmedFromFI(fi as never, "c", true).amount?.source).toBe("AA_MOCK");
+    expect(confirmedFromFI(fi as never, "c", true).lienNoted?.source).toBe("BANK_PORTAL_MOCK");
+    expect(confirmedFromFI(fi as never, "c", false).amount?.source).toBe("AA_LIVE");
+    expect(confirmedFromFI(fi as never, "c", false).lienNoted?.source).toBe("BANK_PORTAL");
+  });
+});

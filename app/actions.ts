@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { DocumentKind } from "@prisma/client";
 import { db } from "@/lib/db";
-import { AuthError } from "@/lib/errors";
+import { AuthError, EvidenceError } from "@/lib/errors";
 import { extractFdr, type ExtractionResult } from "@/lib/extract";
 import { makeAffidavitPdf } from "@/lib/samples";
 import { LOCKOUT_MINUTES, MAX_FAILED_LOGINS, isDemoMode, verifyPassword } from "@/lib/auth";
@@ -19,7 +19,7 @@ import { addInstrumentDocument, applyForRelease, createSubmission, decideClearan
 export type ActionState = { error?: string; ok?: string } | null;
 
 function messageOf(e: unknown): string {
-  if (e instanceof AuthError || e instanceof TransitionError) return e.message;
+  if (e instanceof AuthError || e instanceof TransitionError || e instanceof EvidenceError) return e.message;
   if (e instanceof z.ZodError) return e.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ");
   if (e instanceof Error && /larger than|Unsupported file type/.test(e.message)) return e.message;
   console.error(e);

@@ -1,6 +1,8 @@
 // Mock AA sandbox — reads the mock bank's own book (BankDepositRecord). Labelled "Mock AA sandbox" in UI.
 import { randomUUID } from "crypto";
+import { isDemoMode } from "../auth";
 import { db } from "../db";
+import { EvidenceError } from "../errors";
 import { daysBetween, paiseToRupees, toDay } from "../format";
 import { normalize } from "../provenance";
 import type { AAProvider, ConsentHandle, TermDepositFI } from "./index";
@@ -44,6 +46,8 @@ class MockAAProvider implements AAProvider {
 
 let provider: AAProvider | null = null;
 
+/** The sandbox only runs in demo mode; elsewhere a live Account Aggregator (Phase 4) must be configured. */
 export function getAAProvider(): AAProvider {
+  if (!isDemoMode()) throw new EvidenceError("The Mock AA sandbox is disabled outside demo mode. Configure a live Account Aggregator (Phase 4).");
   return (provider ??= new MockAAProvider());
 }

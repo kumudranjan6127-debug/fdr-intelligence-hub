@@ -9,6 +9,7 @@ import { fmtDate, fmtDateTime, formatINR, humanize, shortHash } from "@/lib/form
 import { requestOrigin } from "@/lib/origin";
 import { requirePageUser } from "@/lib/session";
 import type { NocPayload } from "@/lib/services/noc";
+import { bankEvidenceText } from "@/lib/evidence";
 import { canView } from "@/lib/views";
 
 export const metadata = { title: "Lien-release NOC" };
@@ -80,6 +81,10 @@ export default async function NocLetter({ params }: { params: Promise<{ code: st
                 <tr>
                   <th>Interest</th>
                   <td>{p.interest}</td>
+                </tr>
+                <tr>
+                  <th>Bank evidence</th>
+                  <td className={p.bankEvidence?.level === "BANK_CONFIRMED" ? "" : "font-medium text-amber-900"}>{bankEvidenceText(p.bankEvidence)}</td>
                 </tr>
               </tbody>
             </table>
