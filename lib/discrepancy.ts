@@ -1,6 +1,7 @@
 // Discrepancy detection — compares the three provenance tiers and runs rule checks on the most
 // independent evidence available for each field.
 import type { ChainAnalysis } from "./chain";
+import { findDuplicates, type DupCandidate } from "./duplicates";
 import { formatINR, fmtDate } from "./format";
 import {
   FIELD_KEYS,
@@ -31,9 +32,11 @@ export type DiscrepancyInput = {
     requiredAmountPaise: bigint;
     affidavitDueAt: Date | null;
     hasAffidavit: boolean;
+    /** SHA-256 of this instrument's FDR copy / receipt files. */
+    docHashes?: string[];
   };
-  /** Other instruments' identities, for duplicate detection. */
-  others: { id: string; code: string; institutionId: string; institutionName: string; bankName: unknown; fdrNumber: unknown }[];
+  /** Other live instruments, for duplicate detection. */
+  others: DupCandidate[];
   chain?: ChainAnalysis;
   now: Date;
 };
@@ -84,30 +87,15 @@ export function detectDiscrepancies(input: DiscrepancyInput): DetectedDiscrepanc
     }
   }
 
-  // 2. Duplicate FDR number (same bank + number used by another institution)
-  if (ins.type === "FDR") {
-    const myNo = normalize("fdrNumber", bestEvidence(f.fdrNumber).value);
-    const myBank = normalize("bankName", bestEvidence(f.bankName).value);
-    if (myNo) {
-      const dups = input.others.filter((o) => {
-        if (o.id === ins.id || o.institutionId === ins.institutionId) return false;
-        const of = o.fdrNumber as { claimed?: unknown; confirmed?: { value?: unknown } | null } | null;
-        const ob = o.bankName as { claimed?: unknown; confirmed?: { value?: unknown } | null } | null;
-        const oNo = normalize("fdrNumber", (of?.confirmed?.value ?? of?.claimed ?? null) as string | null);
-        const oBank = normalize("bankName", (ob?.confirmed?.value ?? ob?.claimed ?? null) as string | null);
-        return oNo === myNo && (!myBank || !oBank || oBank === myBank);
-      });
-      if (dups.length) {
-        out.push({
-          code: "DUPLICATE_FDR_NUMBER",
-          field: "fdrNumber",
-          severity: "HIGH",
-          message: `FDR number ${String(bestEvidence(f.fdrNumber).value)} is also submitted by ${dups.map((d) => `${d.institutionName} (${d.code})`).join(", ")}`,
-          evidence: { duplicates: dups.map((d) => ({ instrumentId: d.id, code: d.code, institution: d.institutionName })) },
-        });
-      }
-    }
-  }
+  // 2. Duplicates: same document, same bank + number, or a near-identical deposit (lib/duplicates.ts)
+  const chainIds = new Set((input.chain?.nodes ?? []).map((n) => n.id));
+  out.push(
+    ...findDuplicates(
+      { id: ins.id, code: "", type: ins.type, institutionId: ins.institutionId, institutionName: "", bankName: f.bankName, fdrNumber: f.fdrNumber, amount: f.amount, issueDate: f.issueDate, docHashes: ins.docHashes },
+      input.others,
+      chainIds,
+    ),
+  );
 
   // 3. Amount below required
   const amt = bestEvidence(f.amount);

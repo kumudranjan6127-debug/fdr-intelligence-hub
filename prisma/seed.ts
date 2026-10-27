@@ -98,9 +98,13 @@ type Spec = {
   openCase?: OpenCase;
   rate?: string;
   note?: string;
+  /** Upload the exact FDR-copy bytes generated for another spec (duplicate-document plant). */
+  copyDocOf?: string;
 };
 
 const fdr = (bank: BankKey, n: number) => `${bank}${n}`;
+/** Generated FDR-copy bytes by spec key, so a later spec can re-upload the identical file. */
+const docBytes: Record<string, Uint8Array> = {};
 const Y = 365;
 
 const SPECS: Spec[] = [
@@ -144,6 +148,20 @@ const SPECS: Spec[] = [
   { key: "S2", inst: "sundarbans", type: "ONLINE_DEPOSIT", bank: "BUB", requiredL: 50, truth: { amountL: 50, issue: -2400, maturity: -2400 + 10 * Y, lien: true, no: "AICTE2020SD040213" }, status: "ACTIVE", confirmed: true },
   { key: "S3", inst: "sundarbans", type: "FDR", bank: "KMB", requiredL: 50, truth: { amountL: 50, issue: -1015, maturity: 80, lien: true, no: fdr("KMB", 2023120561) }, status: "EXPIRING", confirmed: true },
   { key: "S4", inst: "sundarbans", type: "FDR", bank: "KMB", requiredL: 25, truth: { amountL: 25, issue: -200, maturity: 3 * Y - 200, lien: true, no: fdr("KMB", 2026131007) }, status: "ACTIVE", confirmed: true },
+
+  // ── Deccan Plateau: uploads Sundarbans' FDR copy byte-for-byte and types the number with two digits swapped
+  {
+    key: "D9",
+    inst: "deccan",
+    type: "FDR",
+    bank: "KMB",
+    truth: { amountL: 50, issue: -1015, maturity: 80, lien: true, no: fdr("KMB", 2023120651) },
+    copyDocOf: "S3",
+    bankRecord: false,
+    status: "UNDER_SCRUTINY",
+    openCase: { type: "NEW_SUBMISSION", status: "RO_SCRUTINY", opened: -2, changed: -2 },
+    note: "planted: duplicate document (same SHA-256 as Sundarbans S3) + near-duplicate terms",
+  },
 
   // ── Hooghly: submits an FDR number already held by Sundarbans (duplicate) — stuck at RO for 20 days
   {
@@ -420,8 +438,9 @@ async function seedInstrument(s: Spec) {
   let fdrFile: Awaited<ReturnType<typeof storePdf>> | null = null;
   let extraction: ReturnType<typeof parseFdrText> | null = null;
   if (docTruth) {
-    const bytes =
-      s.type === "FDR"
+    const bytes = s.copyDocOf
+      ? docBytes[s.copyDocOf]
+      : s.type === "FDR"
         ? await makeFdrPdf({
             bankName: BANKS[s.bank].name,
             branch: BANKS[s.bank].branch,
@@ -442,6 +461,7 @@ async function seedInstrument(s: Spec) {
             payer: inst.trust,
             gateway: `${BANKS[s.bank].name} (AICTE online collection)`,
           });
+    docBytes[s.key] = bytes;
     fdrFile = await storePdf(bytes, `${s.type === "FDR" ? "FDR" : "Receipt"}-${docTruth.no}.pdf`, submittedAt);
     const { extractText, getDocumentProxy } = await import("unpdf");
     const { text } = await extractText(await getDocumentProxy(new Uint8Array(bytes)), { mergePages: true });

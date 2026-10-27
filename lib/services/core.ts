@@ -1,7 +1,8 @@
 // DB orchestration shared by actions, cron and seed: rules lookup, discrepancy sync, risk recompute.
-import type { Instrument, Prisma, PrismaClient } from "@prisma/client";
+import type { DocumentKind, Instrument, Prisma, PrismaClient } from "@prisma/client";
 import { allChains, analyzeChain, buildChain, type ChainNode } from "../chain";
 import { detectDiscrepancies } from "../discrepancy";
+import { duplicatePartners } from "../duplicates";
 import { bestEvidence, normalize, tierFieldsOf } from "../provenance";
 import { DEFAULT_RULES, parseRules, type Rules } from "../rules";
 import { riskScore } from "../risk";
@@ -35,6 +36,9 @@ export function toChainNode(i: Pick<Instrument, "id" | "code" | "type" | "status
   };
 }
 
+/** Documents whose bytes identify the deposit itself (the FDR copy or online payment receipt), not affidavits or letters. */
+const EVIDENCE_DOCS: DocumentKind[] = ["FDR_COPY"];
+
 const LIVE = { notIn: ["REJECTED", "DRAFT"] as ("REJECTED" | "DRAFT")[] };
 
 export async function chainFor(db: Db, instrumentId: string) {
@@ -49,7 +53,7 @@ export async function chainFor(db: Db, instrumentId: string) {
 export async function syncDiscrepancies(db: Db, instrumentId: string, now = new Date()): Promise<string[]> {
   const ins = await db.instrument.findUniqueOrThrow({
     where: { id: instrumentId },
-    include: { documents: { select: { kind: true } } },
+    include: { documents: { select: { kind: true, sha256: true } } },
   });
   const existing = await db.discrepancy.findMany({ where: { instrumentId } });
 
@@ -59,8 +63,19 @@ export async function syncDiscrepancies(db: Db, instrumentId: string, now = new 
   }
 
   const others = await db.instrument.findMany({
-    where: { type: "FDR", id: { not: ins.id }, status: LIVE },
-    select: { id: true, code: true, institutionId: true, bankName: true, fdrNumber: true, institution: { select: { name: true } } },
+    where: { id: { not: ins.id }, status: LIVE },
+    select: {
+      id: true,
+      code: true,
+      type: true,
+      institutionId: true,
+      bankName: true,
+      fdrNumber: true,
+      amount: true,
+      issueDate: true,
+      institution: { select: { name: true } },
+      documents: { where: { kind: { in: EVIDENCE_DOCS } }, select: { sha256: true } },
+    },
   });
 
   const detected = detectDiscrepancies({
@@ -72,8 +87,9 @@ export async function syncDiscrepancies(db: Db, instrumentId: string, now = new 
       requiredAmountPaise: BigInt(ins.requiredAmount.toFixed(0)),
       affidavitDueAt: ins.affidavitDueAt,
       hasAffidavit: ins.documents.some((d) => d.kind === "AFFIDAVIT_3"),
+      docHashes: ins.documents.filter((d) => EVIDENCE_DOCS.includes(d.kind)).map((d) => d.sha256),
     },
-    others: others.map((o) => ({ ...o, institutionName: o.institution.name })),
+    others: others.map((o) => ({ ...o, institutionName: o.institution.name, docHashes: o.documents.map((d) => d.sha256) })),
     chain: await chainFor(db, ins.id),
     now,
   });
@@ -89,8 +105,7 @@ export async function syncDiscrepancies(db: Db, instrumentId: string, now = new 
   const stale = existing.filter((e) => !e.resolvedAt && !MANUAL_CODES.has(e.code) && !keys.has(`${e.code}|${e.field}`));
   if (stale.length) await db.discrepancy.updateMany({ where: { id: { in: stale.map((s) => s.id) } }, data: { resolvedAt: now } });
 
-  const dup = detected.find((d) => d.code === "DUPLICATE_FDR_NUMBER");
-  return dup ? ((dup.evidence.duplicates as { instrumentId: string }[]) ?? []).map((x) => x.instrumentId) : [];
+  return duplicatePartners(detected);
 }
 
 /** Sync an instrument, its duplicate partners, and the risk of every institution touched. */

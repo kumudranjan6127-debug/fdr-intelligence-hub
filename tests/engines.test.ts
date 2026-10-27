@@ -105,7 +105,7 @@ describe("discrepancy detection — planted seed defects", () => {
   it("flags a duplicate FDR number across institutions (Hooghly ↔ Sundarbans)", () => {
     const d = detectDiscrepancies({
       ...baseInput(fields({ bankName: ["Konkan Mercantile Bank"], fdrNumber: ["KMB2022118834"] })),
-      others: [{ id: "i2", code: "INS-2", institutionId: "inst2", institutionName: "Sundarbans", bankName: { claimed: "Konkan Mercantile Bank" }, fdrNumber: { claimed: "KMB2022118834" } }],
+      others: [{ id: "i2", code: "INS-2", type: "FDR", institutionId: "inst2", institutionName: "Sundarbans", bankName: { claimed: "Konkan Mercantile Bank" }, fdrNumber: { claimed: "KMB2022118834" } }],
     });
     expect(d.map((x) => x.code)).toContain("DUPLICATE_FDR_NUMBER");
   });
@@ -313,5 +313,58 @@ describe("evidence controls", () => {
     expect(confirmedFromFI(fi as never, "c", true).lienNoted?.source).toBe("BANK_PORTAL_MOCK");
     expect(confirmedFromFI(fi as never, "c", false).amount?.source).toBe("AA_LIVE");
     expect(confirmedFromFI(fi as never, "c", false).lienNoted?.source).toBe("BANK_PORTAL");
+  });
+});
+
+describe("duplicate FDR detection", () => {
+  const cand = (o: Partial<import("@/lib/duplicates").DupCandidate> & { id: string }) => ({
+    code: o.id.toUpperCase(),
+    type: "FDR",
+    institutionId: "instA",
+    institutionName: "Alpha",
+    bankName: { claimed: "Bharat Union Bank" },
+    fdrNumber: { claimed: "BUB2026160022" },
+    amount: { claimed: L(50) },
+    issueDate: { claimed: "2026-10-21" },
+    docHashes: [] as string[],
+    ...o,
+  });
+
+  it("flags a byte-identical document on another instrument", async () => {
+    const { findDuplicates } = await import("@/lib/duplicates");
+    const f = findDuplicates(cand({ id: "me", fdrNumber: { claimed: "X1" }, docHashes: ["h1"] }), [cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "Y2" }, amount: { claimed: L(10) }, docHashes: ["h1"] })]);
+    expect(f.map((x) => x.code)).toEqual(["DUPLICATE_DOCUMENT"]);
+  });
+
+  it("rates a cross-institution number reuse HIGH and a same-institution one MED", async () => {
+    const { findDuplicates } = await import("@/lib/duplicates");
+    expect(findDuplicates(cand({ id: "me" }), [cand({ id: "o", institutionId: "instB", institutionName: "Beta" })])[0]).toMatchObject({ code: "DUPLICATE_FDR_NUMBER", severity: "HIGH" });
+    expect(findDuplicates(cand({ id: "me" }), [cand({ id: "o" })])[0]).toMatchObject({ code: "DUPLICATE_FDR_NUMBER", severity: "MED" });
+  });
+
+  it("ignores formatting, prefers bank-confirmed values and skips other banks", async () => {
+    const { findDuplicates } = await import("@/lib/duplicates");
+    const spaced = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "wrong", confirmed: { value: "bub-2026 160022" } } });
+    expect(findDuplicates(cand({ id: "me" }), [spaced]).map((x) => x.code)).toEqual(["DUPLICATE_FDR_NUMBER"]);
+    expect(findDuplicates(cand({ id: "me" }), [cand({ id: "o", bankName: { claimed: "Ganga Gramin Bank" }, amount: { claimed: L(10) } })])).toEqual([]);
+  });
+
+  it("finds near duplicates: one character off, or same principal and issue date", async () => {
+    const { findDuplicates } = await import("@/lib/duplicates");
+    const oneOff = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB2026160023" }, amount: { claimed: L(10) } });
+    expect(findDuplicates(cand({ id: "me" }), [oneOff]).map((x) => x.code)).toEqual(["NEAR_DUPLICATE_FDR"]);
+    const sameTerms = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB9999999999" } });
+    expect(findDuplicates(cand({ id: "me" }), [sameTerms]).map((x) => x.code)).toEqual(["NEAR_DUPLICATE_FDR"]);
+  });
+
+  it("never flags members of the same renewal chain", async () => {
+    const { findDuplicates } = await import("@/lib/duplicates");
+    expect(findDuplicates(cand({ id: "me", docHashes: ["h"] }), [cand({ id: "pred", docHashes: ["h"] })], new Set(["pred"]))).toEqual([]);
+  });
+
+  it("computes edit distance", async () => {
+    const { levenshtein } = await import("@/lib/duplicates");
+    expect(levenshtein("kitten", "sitting")).toBe(3);
+    expect(levenshtein("abc", "abc")).toBe(0);
   });
 });

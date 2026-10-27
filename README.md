@@ -24,6 +24,8 @@ A verification-first portal for the security deposits / Fixed Deposit Receipts t
 | U6 | **Institution risk score:** 40·late renewals + 30·gap days/30 + 20·open discrepancies + 10·overdue cases (cap 100). The queue is sorted by it. | `/officer`, dashboard |
 | U7 | **Unclaimed matured deposits finder:** deposits past their 10-year term with no release application, plus a one-click notice draft | Dashboard |
 | U8 | **"Why is this pending?":** for every open case, the blocking step, owner, days pending, next action and evidence | Passport, case review, queue |
+| U9 | **Duplicate FDR detection:** the same file (SHA-256) on another instrument, the same bank + FDR number (HIGH across institutions, MED within one), or a near-duplicate (one-character-off number, or same bank, principal and issue date). Renewal-chain members are never flagged. | Case review → Discrepancies; seed plant: Deccan Plateau re-uploads Sundarbans' FDR |
+| U10 | **Evidence controls:** every bank value carries its source; sandbox values are labelled "Sandbox · not bank evidence", NOCs record what they rest on, and outside `DEMO_MODE` the Mock AA is refused and a NOC needs live bank confirmation. | Case review, NOC letter, `/verify/:code` |
 
 Also included:
 
