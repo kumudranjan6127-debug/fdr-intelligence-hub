@@ -25,7 +25,7 @@ Verification-first, not a CRUD register:
 
 ## Commands
 - `npx prisma dev start fdr` — start local Postgres (PGlite); then `npm run dev` on port 3000
-- `npm test` (21 vitest tests) · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
+- `npm test` (33 vitest tests) · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
 - Local `.env` (gitignored) needs `DATABASE_URL` with `&pgbouncer=true&connection_limit=1` (PGlite shares one connection), plus `DATABASE_URL_UNPOOLED`.
 - On Windows, stop the dev server before `npm run build` or before moving folders (file locks).
 - Playwright helper scripts live in `scratch/` (gitignored): `ui-flows.mjs` drives all 5 demo flows, `shots.mjs` takes screenshots. They use installed Chrome (`channel: "chrome"`).
@@ -40,10 +40,23 @@ Verification-first, not a CRUD register:
 - Dashboard "Renewal chain alerts" links the Shivneri gap, the Narmada amount drop and the Kaveri missing lien. The links open `?tab=chain` on the passport.
 - OCR: there is **no PaddleOCR** yet (it is roadmap P5). The text parser only reads PDFs that have a text layer; scanned files need `ANTHROPIC_API_KEY` (Claude).
 
+## Review hardening (27–28 Oct, live)
+An outside review asked for six things. Done so far:
+- **Auth:** scrypt passwords, HMAC-signed expiring session cookie (`lib/auth.ts`, `lib/session.ts`), lockout after 5 failures. One-click demo accounts only with `DEMO_MODE=1` (set on Vercel). Demo password `Demo@26265` (`DEMO_PASSWORD`). No user ids in the sign-in HTML.
+- **Evidence controls (`lib/evidence.ts`):** each Confirmed value carries `AA_MOCK` / `BANK_PORTAL_MOCK` or a live source. The UI shows "Sandbox · not bank evidence" and a "Sandbox match" verdict. NOC payloads record `bankEvidence`. Outside demo mode the Mock AA throws `EvidenceError` and a NOC needs live confirmation.
+- **Duplicates (`lib/duplicates.ts`):** `DUPLICATE_DOCUMENT` (SHA-256), `DUPLICATE_FDR_NUMBER` (HIGH across institutions, MED within one), `NEAR_DUPLICATE_FDR`. Chain members are excluded. Seed plant D9: Deccan Plateau re-uploads Sundarbans' FDR. The seed now has 46 instruments.
+- **Deploy safety:** `scripts/vercel-db-setup.mjs` migrates and seeds only when `VERCEL_ENV=production`.
+- Tests: 33 vitest tests. `scratch/ui-flows.mjs` (local) passes all 5 flows; `scratch/auth-check.mjs` checks sign-in.
+
+Still to do from the review:
+1. Integration tests on a real DB and committed Playwright E2E tests (`e2e/`) with CI.
+2. Validate the policy engine against the actual APH text: section, page and effective date per rule, with unverified rules labelled "Illustrative".
+3. A reproducible evaluation (`npm run eval`): planted-defect dataset → detection rate, false positives, timing and workflow completion, plus a Metrics page.
+
 ## Next steps
-1. `ANTHROPIC_API_KEY` is set on Vercel Production (26 Oct); live extraction uses Claude (about 9 s, 96–97% confidence on the sample). Still optional: `CRON_SECRET`.
-2. Idea PPT for 28 Oct, built from the README pitch and fresh live screenshots.
-3. After the deadline: roadmap phases P2–P10 (README). The recommendation was P4 (real Account Aggregator) and P10 (metrics) first.
+1. Idea PPT (due 28 Oct), built from the README pitch and fresh live screenshots.
+2. Optional: `CRON_SECRET`.
+3. After the deadline: roadmap phases P2–P10 (README).
 
 ## Conventions
 - Commit messages: `feat(scope): …`, in small commits. End each with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
