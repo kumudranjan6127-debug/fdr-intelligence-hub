@@ -25,7 +25,7 @@ Verification-first, not a CRUD register:
 
 ## Commands
 - `npx prisma dev start fdr` — start local Postgres (PGlite); then `npm run dev` on port 3000
-- `npm test` (33 vitest tests) · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
+- `npm test` (36 vitest tests) · `npm run test:int` · `npm run test:e2e` (set `PW_CHANNEL=chrome` locally) · `npm run eval` · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
 - Local `.env` (gitignored) needs `DATABASE_URL` with `&pgbouncer=true&connection_limit=1` (PGlite shares one connection), plus `DATABASE_URL_UNPOOLED`.
 - On Windows, stop the dev server before `npm run build` or before moving folders (file locks).
 - Playwright helper scripts live in `scratch/` (gitignored): `ui-flows.mjs` drives all 5 demo flows, `shots.mjs` takes screenshots. They use installed Chrome (`channel: "chrome"`).
@@ -48,10 +48,20 @@ An outside review asked for six things. Done so far:
 - **Deploy safety:** `scripts/vercel-db-setup.mjs` migrates and seeds only when `VERCEL_ENV=production`.
 - Tests: 33 vitest tests. `scratch/ui-flows.mjs` (local) passes all 5 flows; `scratch/auth-check.mjs` checks sign-in.
 
-Still to do from the review:
-1. Integration tests on a real DB and committed Playwright E2E tests (`e2e/`) with CI.
-2. Validate the policy engine against the actual APH text: section, page and effective date per rule, with unverified rules labelled "Illustrative".
-3. A reproducible evaluation (`npm run eval`): planted-defect dataset → detection rate, false positives, timing and workflow completion, plus a Metrics page.
+- **Tests:**
+  - 36 unit tests.
+  - `npm run test:int`: 11 integration tests (real services + Postgres).
+  - `npm run test:e2e`: 11 Playwright tests (sign-in + the 5 demo flows).
+  - Integration and e2e both use `TEST_DATABASE_URL`, are migrated and reseeded per run, and refuse to run if it equals `DATABASE_URL`. Locally that is a second PGlite instance (`npx prisma dev -n fdrtest -d`) on port 51218.
+  - GitHub Actions CI (`.github/workflows/ci.yml`) runs lint, typecheck, unit, integration, build and e2e on Postgres 16.
+  - Prisma refuses `migrate reset` from an AI agent, so setup uses `migrate deploy` plus the seed. Do not bypass that guard.
+- **Evaluation:** `npm run eval [-- --workflow]` uses seed 26265 and 210 cases, and writes `eval/results.json` and `eval/REPORT.md`; the public `/metrics` page reads the JSON. Latest run: 110/110 planted defects caught, 0/70 correct deposits flagged, 30/30 workflows completed. The first run caught a near-duplicate false positive, and the rule was tightened. Run eval after committing the code, so the recorded commit hash matches.
+- **Policy engine:** validated against the APH 2024-27 text (printed page numbers).
+  - Deposit amount: Table 1.4 per programme and level (`Institution.programmeLevels`).
+  - Release deductions: 50% after six years without EoA (cl. 2.21(i)); 10% for late closure documents (cl. 2.21(h), `Institution.closureDocsLapsed`); 10% for early encashment (cl. 7.7, not wired to any data).
+  - The handbook says 20% for the late-affidavit second tier; Guidelines cl. 6.2(f) say 50%. This conflict is shown, not resolved.
+  - `RULE_REGISTER` in `lib/rules.ts` and the public `/policy` page show each rule with its source. Rule set version: `APH-2024-27-v2`.
+- Windows: `TaskStop` on `npm run dev` leaves `next` child processes alive. They lock the Prisma DLL and share `.next` with the e2e server, so kill them before `prisma generate` or e2e.
 
 ## Next steps
 1. Idea PPT (due 28 Oct), built from the README pitch and fresh live screenshots.

@@ -141,16 +141,22 @@ const SubmissionSchema = z.object({
   affidavitFileId: z.string().nullable(),
 });
 
-export async function submitInstrument(payload: unknown): Promise<{ caseId: string; instrumentId: string } | { error: string }> {
+/**
+ * On success this redirects to the new FDR Passport. Redirecting from the action delivers the revalidation and
+ * the navigation in one response; a client-side router.push after a revalidating action could be aborted by the
+ * refresh and leave the wizard stuck on "Submitting…".
+ */
+export async function submitInstrument(payload: unknown): Promise<{ error: string }> {
+  let instrumentId: string;
   try {
     const user = await requireRole(["INSTITUTION"]);
     const input = SubmissionSchema.parse(payload);
-    const res = await createSubmission(user, input as Parameters<typeof createSubmission>[1]);
+    ({ instrumentId } = await createSubmission(user, input as Parameters<typeof createSubmission>[1]));
     revalidatePath("/", "layout");
-    return res;
   } catch (e) {
     return { error: messageOf(e) };
   }
+  redirect(`/institution/instruments/${instrumentId}?submitted=1`);
 }
 
 // ───────── case workflow ─────────

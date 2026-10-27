@@ -1,7 +1,6 @@
 "use client";
 // Guided wizard: type → details (claimed) → upload (AI extracts) → confirm field-by-field → submit.
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, FilePlus2, FileSearch, Globe, Landmark, Loader2, RefreshCw, Replace, Upload } from "lucide-react";
 import { submitInstrument, uploadForExtraction, uploadPlain, type UploadResult } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,6 @@ export function SubmitWizard(props: {
   samples: { file: string; title: string; hint: string }[];
   affidavitWindowDays: number;
 }) {
-  const router = useRouter();
   const initialPred = props.predecessors.find((p) => p.id === props.initialPredecessor) ?? null;
   const [step, setStep] = useState(0);
   const [type, setType] = useState<"FDR" | "ONLINE_DEPOSIT">(initialPred?.type ?? "FDR");
@@ -149,8 +147,8 @@ export function SubmitWizard(props: {
         upload: upload?.extraction ? { fileId: upload.fileId, extraction: upload.extraction } : null,
         affidavitFileId: affidavit?.fileId ?? null,
       });
-      if ("error" in res) return setError(res.error);
-      router.push(`/institution/instruments/${res.instrumentId}?submitted=1`);
+      // On success the action redirects to the passport; it only returns on error.
+      if (res?.error) setError(res.error);
     });
   }
 
