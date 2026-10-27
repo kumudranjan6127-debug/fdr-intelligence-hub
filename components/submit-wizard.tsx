@@ -147,8 +147,9 @@ export function SubmitWizard(props: {
         upload: upload?.extraction ? { fileId: upload.fileId, extraction: upload.extraction } : null,
         affidavitFileId: affidavit?.fileId ?? null,
       });
-      // On success the action redirects to the passport; it only returns on error.
-      if (res?.error) setError(res.error);
+      if ("error" in res) return setError(res.error);
+      // Full page load: a soft navigation here could hang (see submitInstrument).
+      window.location.assign(`/institution/instruments/${res.instrumentId}?submitted=1`);
     });
   }
 

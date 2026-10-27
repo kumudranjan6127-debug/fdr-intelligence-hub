@@ -142,21 +142,18 @@ const SubmissionSchema = z.object({
 });
 
 /**
- * On success this redirects to the new FDR Passport. Redirecting from the action delivers the revalidation and
- * the navigation in one response; a client-side router.push after a revalidating action could be aborted by the
- * refresh and leave the wizard stuck on "Submitting…".
+ * The wizard opens the new FDR Passport with a full page load on success. A soft navigation after this action
+ * (router.push, or redirect() from the action) intermittently never committed and left the wizard on
+ * "Submitting…" (CI e2e). Every portal page is dynamic, so the full load also needs no revalidatePath.
  */
-export async function submitInstrument(payload: unknown): Promise<{ error: string }> {
-  let instrumentId: string;
+export async function submitInstrument(payload: unknown): Promise<{ caseId: string; instrumentId: string } | { error: string }> {
   try {
     const user = await requireRole(["INSTITUTION"]);
     const input = SubmissionSchema.parse(payload);
-    ({ instrumentId } = await createSubmission(user, input as Parameters<typeof createSubmission>[1]));
-    revalidatePath("/", "layout");
+    return await createSubmission(user, input as Parameters<typeof createSubmission>[1]);
   } catch (e) {
     return { error: messageOf(e) };
   }
-  redirect(`/institution/instruments/${instrumentId}?submitted=1`);
 }
 
 // ───────── case workflow ─────────
