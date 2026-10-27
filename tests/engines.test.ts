@@ -349,12 +349,15 @@ describe("duplicate FDR detection", () => {
     expect(findDuplicates(cand({ id: "me" }), [cand({ id: "o", bankName: { claimed: "Ganga Gramin Bank" }, amount: { claimed: L(10) } })])).toEqual([]);
   });
 
-  it("finds near duplicates: one character off, or same principal and issue date", async () => {
+  it("finds near duplicates: one character off, or same principal and issue date with a similar number", async () => {
     const { findDuplicates } = await import("@/lib/duplicates");
     const oneOff = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB2026160023" }, amount: { claimed: L(10) } });
     expect(findDuplicates(cand({ id: "me" }), [oneOff]).map((x) => x.code)).toEqual(["NEAR_DUPLICATE_FDR"]);
-    const sameTerms = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB9999999999" } });
-    expect(findDuplicates(cand({ id: "me" }), [sameTerms]).map((x) => x.code)).toEqual(["NEAR_DUPLICATE_FDR"]);
+    const swapped = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB2026160202" } });
+    expect(findDuplicates(cand({ id: "me" }), [swapped]).map((x) => x.code)).toEqual(["NEAR_DUPLICATE_FDR"]);
+    // Standard amounts make same-day, same-bank deposits common: terms alone are not enough.
+    const unrelated = cand({ id: "o", institutionId: "instB", fdrNumber: { claimed: "BUB9999999999" } });
+    expect(findDuplicates(cand({ id: "me" }), [unrelated])).toEqual([]);
   });
 
   it("never flags members of the same renewal chain", async () => {

@@ -1,7 +1,9 @@
 // Duplicate FDR detection. Three independent signals, each with its own code so officers see why:
 //   DUPLICATE_DOCUMENT    the same file (SHA-256) backs another instrument
 //   DUPLICATE_FDR_NUMBER  the same bank + FDR/transaction number on another live instrument
-//   NEAR_DUPLICATE_FDR    same bank and either a one-character-off number, or identical principal + issue date
+//   NEAR_DUPLICATE_FDR    same bank and either a one-character-off number, or identical principal + issue date with a
+//                         number at most three edits away (deposit amounts are standard, so same-day ₹50 L FDRs
+//                         at one bank are common; `npm run eval` showed terms alone raise false alarms)
 // Instruments in the same renewal chain are never duplicates of each other (banks may renew under one number).
 import { normalize } from "./provenance";
 
@@ -108,7 +110,7 @@ export function findDuplicates(me: DupCandidate, others: DupCandidate[], chainId
       const t = identity(o);
       if (!mine.bank || t.bank !== mine.bank || !t.no) return false;
       const oneOff = t.no.length >= 6 && levenshtein(t.no, mine.no!) === 1;
-      const sameTerms = !!mine.amount && !!mine.issue && t.amount === mine.amount && t.issue === mine.issue;
+      const sameTerms = !!mine.amount && !!mine.issue && t.amount === mine.amount && t.issue === mine.issue && levenshtein(t.no, mine.no!) <= 3;
       return oneOff || sameTerms;
     });
     if (near.length) {
@@ -117,7 +119,7 @@ export function findDuplicates(me: DupCandidate, others: DupCandidate[], chainId
         code: "NEAR_DUPLICATE_FDR",
         field: "fdrNumber",
         severity: "MED",
-        message: `Looks like the same deposit as ${who(refs)}: same bank with a one-character-off number or the same principal and issue date`,
+        message: `Looks like the same deposit as ${who(refs)}: same bank, and a one-character-off number or the same principal and issue date with a near-identical number`,
         evidence: { duplicates: refs, signal: "fuzzy" },
       });
     }
