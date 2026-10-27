@@ -78,6 +78,8 @@ npx prisma migrate deploy
 npm run db:seed                  # ~1–2 min: 15 institutions, 45 instruments, planted defects
 npm run dev                      # http://localhost:3000
 npm test                         # engine unit tests (vitest)
+npm run test:int                 # integration: real services + Postgres (needs TEST_DATABASE_URL, reseeded per run)
+PW_CHANNEL=chrome npm run test:e2e  # browser end-to-end tests (Playwright) against TEST_DATABASE_URL
 ```
 
 Environment (`.env`):
@@ -90,6 +92,7 @@ Environment (`.env`):
 | `BLOB_READ_WRITE_TOKEN` | optional | Vercel Blob for uploads. If unset, bytes are stored in Postgres. |
 | `CRON_SECRET` | prod | Protects `/api/cron/maturity` (Vercel Cron sends it as a Bearer token) |
 | `NEXT_PUBLIC_APP_URL` | optional | Absolute URL for NOC QR codes (otherwise taken from the request host) |
+| `TEST_DATABASE_URL` | tests | Throwaway Postgres for `test:int` and `test:e2e`; migrated and reseeded on every run, so it must differ from `DATABASE_URL` |
 | `DEMO_MODE` | demo | `1` shows the demo accounts for one-click sign-in. Leave unset in production. |
 | `DEMO_PASSWORD` | optional | Password the seed gives every demo account (default `Demo@26265`) |
 | `SESSION_SECRET` | recommended | HMAC key for session cookies. If unset, one is derived from the database URL. |
