@@ -32,6 +32,7 @@ Also included:
 - an append-only audit log in which each event's hash covers the previous one (re-verified on `/audit`)
 - a server-side state machine (`lib/transitions.ts`)
 - role checks on every action, and Zod on every input
+- government-portal layout (GIGW conventions): a top bar with skip link, text size (A- / A / A+), high contrast and an English / हिंदी switch; a blue menu bar; a prototype disclaimer strip; breadcrumbs; FAQ; and a full footer with the last-updated date. Hindi covers the menus and public pages; officer screens are in English. No national emblem or AICTE logo is used.
 
 ## Measured results
 

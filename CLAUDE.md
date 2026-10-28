@@ -72,3 +72,4 @@ An outside review asked for six things. Done so far:
 - Commit messages: `feat(scope): …`, in small commits. End each with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Money is stored in paise (Decimal or strings); dates are UTC and displayed in IST.
 - Provenance colours: amber = Claimed, blue = Extracted, green = Confirmed, red = Mismatch.
+- Public pages render inside `GovFrame` (`components/gov-chrome.tsx`); add new English/Hindi strings to `lib/i18n.ts` and read the language with `getLang()` (`lang` cookie). Do not add the national emblem or the AICTE logo.
