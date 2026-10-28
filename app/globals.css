@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-noto-sans), var(--font-noto-deva), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -50,6 +50,8 @@
   --color-india-green: oklch(0.52 0.13 150);
   --color-navy: oklch(0.29 0.09 262);
   --color-navy-soft: oklch(0.95 0.02 262);
+  --color-gov-blue: oklch(0.43 0.14 258);
+  --color-saffron-deep: oklch(0.6 0.17 50);
   --shadow-card: 0 1px 2px 0 oklch(0.3 0.05 262 / 0.05), 0 1px 3px 0 oklch(0.3 0.05 262 / 0.04);
 }
 
@@ -133,6 +135,34 @@
     @apply font-sans;
   }
 }
+/* Text size (A- / A / A+ in the top bar). Everything is in rem, so the root size scales the page. */
+html[data-text="sm"] {
+  font-size: 93.75%;
+}
+html[data-text="lg"] {
+  font-size: 112.5%;
+}
+
+/* High contrast: darker text and borders, underlined links, no muted greys. */
+html[data-contrast="high"] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0 0 0);
+  --card-foreground: oklch(0 0 0);
+  --muted-foreground: oklch(0.25 0 0);
+  --border: oklch(0.35 0 0);
+  --primary: oklch(0.3 0.14 262);
+  --color-navy: oklch(0.2 0.08 262);
+  --color-gov-blue: oklch(0.28 0.12 258);
+}
+html[data-contrast="high"] a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+html[data-contrast="high"] :focus-visible {
+  outline: 3px solid oklch(0.8 0.17 85) !important;
+  outline-offset: 2px;
+}
+
 @layer utilities {
   .tricolor {
     background: linear-gradient(90deg, var(--color-saffron) 0 33.3%, #fff 33.3% 66.6%, var(--color-india-green) 66.6% 100%);

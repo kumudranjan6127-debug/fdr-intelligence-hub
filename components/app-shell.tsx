@@ -3,6 +3,8 @@ import type { Role } from "@prisma/client";
 import { ChevronRight } from "lucide-react";
 import { signOut } from "@/app/actions";
 import { homeFor, type SessionUser } from "@/lib/session";
+import { getLang } from "@/lib/lang";
+import { BrandMark, GovFrame, GovTopBar, PageBand, type NavKey } from "./gov-chrome";
 import { MobileNav, SidebarNav, type NavItem } from "./sidebar-nav";
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -42,11 +44,13 @@ export const NAV: Record<Role, NavItem[]> = {
 function Brand({ compact, href = "/" }: { compact?: boolean; href?: string }) {
   return (
     <Link href={href} className="flex items-center gap-2.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy text-[11px] font-bold tracking-tight text-white shadow-sm">FDR</span>
+      <BrandMark className="size-9 shrink-0" />
       {!compact && (
         <span className="leading-tight">
-          <span className="block text-[15px] font-semibold tracking-tight text-foreground">FDR Intelligence Hub</span>
-          <span className="block text-[11px] text-muted-foreground">AICTE · Security Deposits</span>
+          <span className="block text-[15px] font-bold tracking-tight text-navy">FDR Intelligence Hub</span>
+          <span lang="hi" className="block text-[11px] font-semibold text-saffron-deep">
+            एफडीआर इंटेलिजेंस हब
+          </span>
         </span>
       )}
     </Link>
@@ -85,61 +89,53 @@ function UserCard({ user }: { user: SessionUser }) {
   );
 }
 
-/** Signed-in portal: left sidebar on desktop, collapsible menu on mobile. */
-export function PortalShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
+/** Signed-in portal: government top bar, then a left sidebar on desktop and a collapsible menu on mobile. */
+export async function PortalShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const items = NAV[user.role];
+  const lang = await getLang();
   return (
     <div className="min-h-screen">
+      <GovTopBar lang={lang} />
       <div className="tricolor h-1 w-full" aria-hidden />
-      <aside className="fixed inset-y-0 left-0 top-1 z-30 hidden w-64 flex-col border-r bg-card lg:flex">
-        <div className="px-5 py-5">
-          <Brand href={homeFor(user.role)} />
-        </div>
-        <div className="px-3">
-          <div className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{ROLE_LABEL[user.role]}</div>
-          <SidebarNav items={items} />
-        </div>
-        <div className="mt-auto space-y-3 p-3">
-          <UserCard user={user} />
-          <p className="px-1 text-[10px] leading-snug text-muted-foreground">SIH26265 prototype · fictional data · Mock AA sandbox</p>
-        </div>
-      </aside>
+      <div className="lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r bg-card lg:flex">
+          <div className="px-5 py-5">
+            <Brand href={homeFor(user.role)} />
+          </div>
+          <div className="px-3">
+            <div className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{ROLE_LABEL[user.role]}</div>
+            <SidebarNav items={items} />
+          </div>
+          <div className="mt-auto space-y-3 p-3">
+            <UserCard user={user} />
+            <p className="px-1 text-[10px] leading-snug text-muted-foreground">SIH26265 prototype · fictional data · Mock AA sandbox</p>
+          </div>
+        </aside>
 
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-card/95 px-4 py-2.5 backdrop-blur lg:hidden">
-        <Brand compact href={homeFor(user.role)} />
-        <MobileNav items={items} userName={user.name} role={ROLE_LABEL[user.role]} />
-      </header>
-
-      <div className="lg:pl-64">
-        <main className="mx-auto w-full max-w-350 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
-        <Footer />
+        <div className="min-w-0 flex-1">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-card/95 px-4 py-2.5 backdrop-blur lg:hidden">
+            <Brand compact href={homeFor(user.role)} />
+            <MobileNav items={items} userName={user.name} role={ROLE_LABEL[user.role]} />
+          </header>
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-350 px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-8">
+            {children}
+          </main>
+          <Footer />
+        </div>
       </div>
     </div>
   );
 }
 
-/** Public pages (login, NOC verification): slim header. */
-export function PublicShell({ user, children, wide }: { user: SessionUser | null; children: React.ReactNode; wide?: boolean }) {
+export type Band = { crumbs: Crumb[]; title: React.ReactNode; subtitle?: React.ReactNode };
+
+/** Public pages (verification, results, rules): the full government frame, with an optional title band. */
+export function PublicShell({ user, children, wide, active, band }: { user: SessionUser | null; children: React.ReactNode; wide?: boolean; active?: NavKey; band?: Band }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="tricolor h-1 w-full" aria-hidden />
-      <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <Brand />
-          {user ? (
-            <Link href={homeFor(user.role)} className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-              Back to portal
-            </Link>
-          ) : (
-            <Link href="/login" className="rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-              Sign in
-            </Link>
-          )}
-        </div>
-      </header>
-      <main className={`mx-auto w-full flex-1 px-4 py-8 ${wide ? "max-w-6xl" : "max-w-3xl"}`}>{children}</main>
-      <Footer />
-    </div>
+    <GovFrame user={user} active={active}>
+      {band && <PageBand {...band} />}
+      <main className={`mx-auto w-full flex-1 px-4 py-8 sm:px-6 ${wide ? "max-w-6xl" : "max-w-3xl"}`}>{children}</main>
+    </GovFrame>
   );
 }
 
