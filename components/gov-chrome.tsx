@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { CalendarDays, Info, LogIn } from "lucide-react";
 import { A11yControls, LangSwitch } from "@/components/gov-controls";
+import { Suspense } from "react";
+import { DemoClockBar } from "@/components/demo-clock";
+import { shiftedNow } from "@/lib/clock";
+import { demoOffsetDays } from "@/lib/demo-clock";
 import { fmtDate } from "@/lib/format";
 import { t, type Lang } from "@/lib/i18n";
 import { getLang } from "@/lib/lang";
@@ -74,7 +78,7 @@ function Brand({ lang, href = "/" }: { lang: Lang; href?: string }) {
   );
 }
 
-export function GovHeader({ lang, user }: { lang: Lang; user: SessionUser | null }) {
+export function GovHeader({ lang, user, today = new Date(), offset = 0 }: { lang: Lang; user: SessionUser | null; today?: Date; offset?: number }) {
   return (
     <header className="border-b bg-card">
       <div className="tricolor h-1 w-full" aria-hidden />
@@ -90,7 +94,8 @@ export function GovHeader({ lang, user }: { lang: Lang; user: SessionUser | null
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden items-center gap-1.5 rounded-full border bg-muted/60 px-3 py-1 text-xs text-foreground/80 md:inline-flex">
             <CalendarDays className="size-3.5" aria-hidden />
-            {t(lang, "today")}: <strong className="font-semibold">{fmtDate(new Date())}</strong>
+            {t(lang, "today")}: <strong className="font-semibold">{fmtDate(today)}</strong>
+              {offset > 0 && <span className="rounded bg-violet-600 px-1 text-[10px] font-bold text-white">DEMO</span>}
           </span>
           {user ? (
             <Link href={homeFor(user.role)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
@@ -208,13 +213,19 @@ export function GovFooter({ lang, wide }: { lang: Lang; wide?: boolean }) {
 
 /** The full public frame: top bar, header, menu, disclaimer, page, footer. */
 export async function GovFrame({ user, active, children }: { user: SessionUser | null; active?: NavKey; children: React.ReactNode }) {
-  const lang = await getLang();
+  const [lang, offset] = await Promise.all([getLang(), demoOffsetDays()]);
+  const today = shiftedNow(offset);
   return (
     <div className="flex min-h-screen flex-col">
       <GovTopBar lang={lang} />
-      <GovHeader lang={lang} user={user} />
+      <GovHeader lang={lang} user={user} today={today} offset={offset} />
       <GovNav lang={lang} active={active} />
       <Disclaimer lang={lang} />
+      {offset > 0 && (
+        <Suspense>
+          <DemoClockBar demoDate={fmtDate(today)} realDate={fmtDate(new Date())} offset={offset} />
+        </Suspense>
+      )}
       <div id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
         {children}
       </div>

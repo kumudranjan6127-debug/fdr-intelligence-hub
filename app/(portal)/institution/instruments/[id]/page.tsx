@@ -20,6 +20,7 @@ import { trustOf } from "@/lib/registry";
 import { requirePageUser } from "@/lib/session";
 import { canView, loadInstrument } from "@/lib/views";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "FDR Passport" };
@@ -30,10 +31,10 @@ export default async function PassportPage({ params, searchParams }: { params: P
   const { id } = await params;
   const { tab } = await searchParams;
   const user = await requirePageUser();
-  const v = await loadInstrument(id);
+  const now = await appNow();
+  const v = await loadInstrument(id, now);
   if (!v || !canView(user, v.ins)) notFound();
   const { ins, fields, chain, openCases, why } = v;
-  const now = new Date();
   const mat = normalize("maturityDate", bestEvidence(fields.maturityDate).value);
   const days = mat ? daysBetween(now, mat) : null;
   const isInstitution = user.role === "INSTITUTION";

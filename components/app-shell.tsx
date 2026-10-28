@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { shiftedNow } from "@/lib/clock";
+import { demoOffsetDays } from "@/lib/demo-clock";
 import Link from "next/link";
 import type { Role } from "@prisma/client";
 import { Bell, CalendarDays, Info } from "lucide-react";
@@ -9,6 +11,7 @@ import { getLang } from "@/lib/lang";
 import { recentNoticeCount } from "@/lib/services/notifications";
 import { homeFor, type SessionUser } from "@/lib/session";
 import { BrandMark, GovFooter, GovFrame, GovTopBar, PageBand, type NavKey } from "./gov-chrome";
+import { DemoClockBar } from "./demo-clock";
 import { PortalNav, UserMenu, type NavItem } from "./portal-nav";
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -62,7 +65,8 @@ function initials(name: string) {
 
 /** Signed-in portal: the government top bar, an identity header with the bell and user menu, a role menu bar. */
 export async function PortalShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
-  const [lang, notices] = await Promise.all([getLang(), recentNoticeCount(user)]);
+  const [lang, notices, offset] = await Promise.all([getLang(), recentNoticeCount(user), demoOffsetDays()]);
+  const today = shiftedNow(offset);
   const org = user.institution?.name.split(",")[0] ?? user.bank?.name ?? user.designation ?? "";
   const role = `${ROLE_LABEL[user.role]}${user.cell ? ` · ${user.cell.toLowerCase()} cell` : ""}`;
   return (
@@ -91,7 +95,8 @@ export async function PortalShell({ user, children }: { user: SessionUser; child
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <span className="hidden items-center gap-1.5 rounded-full border bg-muted/60 px-3 py-1 text-xs text-foreground/80 lg:inline-flex">
               <CalendarDays className="size-3.5" aria-hidden />
-              {t(lang, "today")}: <strong className="font-semibold">{fmtDate(new Date())}</strong>
+              {t(lang, "today")}: <strong className="font-semibold">{fmtDate(today)}</strong>
+              {offset > 0 && <span className="rounded bg-violet-600 px-1 text-[10px] font-bold text-white">DEMO</span>}
             </span>
             <Link
               href="/notifications"
@@ -119,6 +124,11 @@ export async function PortalShell({ user, children }: { user: SessionUser; child
           Prototype for SIH 2026 · fictional institutions, banks and people · bank confirmation via Mock AA sandbox · not an official AICTE website
         </p>
       </div>
+      {offset > 0 && (
+        <Suspense>
+          <DemoClockBar demoDate={fmtDate(today)} realDate={fmtDate(new Date())} offset={offset} wide />
+        </Suspense>
+      )}
       <main id="main" tabIndex={-1} className="mx-auto w-full max-w-350 flex-1 px-4 pb-10 outline-none sm:px-6 lg:px-8">
         {children}
       </main>

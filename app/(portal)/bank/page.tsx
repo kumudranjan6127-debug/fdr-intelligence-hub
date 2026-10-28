@@ -12,6 +12,7 @@ import { loadRegistry } from "@/lib/services/registry";
 import { requirePageUser } from "@/lib/session";
 import type { NocPayload } from "@/lib/services/noc";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "Bank portal" };
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ const STEPS = [
 
 export default async function BankInbox() {
   const user = await requirePageUser(["BANK"]);
-  const now = new Date();
+  const now = await appNow();
   const [nocs, { rows }] = await Promise.all([
     db.noc.findMany({ where: { instrument: { bankId: user.bankId } }, include: { case: true }, orderBy: { issuedAt: "desc" } }),
     loadRegistry(db, now),

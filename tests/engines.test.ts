@@ -540,3 +540,23 @@ describe("protection gap", () => {
     expect(by.shortfall).toBe(BigInt(L(70)));
   });
 });
+
+describe("demo clock", () => {
+  it("clamps the offset to whole days between 0 and ten years", async () => {
+    const { parseOffset, MAX_OFFSET_DAYS } = await import("@/lib/clock");
+    expect(parseOffset("30")).toBe(30);
+    expect(parseOffset("-5")).toBe(0);
+    expect(parseOffset("abc")).toBe(0);
+    expect(parseOffset(undefined)).toBe(0);
+    expect(parseOffset(99999)).toBe(MAX_OFFSET_DAYS);
+  });
+
+  it("shifts now and turns a target date into an offset", async () => {
+    const { offsetForDate, shiftedNow } = await import("@/lib/clock");
+    const real = new Date("2026-10-28T10:00:00Z");
+    expect(shiftedNow(30, real).toISOString()).toBe("2026-11-27T10:00:00.000Z");
+    expect(offsetForDate("2027-01-26", real)).toBe(90);
+    expect(offsetForDate("2026-10-01", real)).toBe(0);
+    expect(offsetForDate("not a date", real)).toBe(0);
+  });
+});

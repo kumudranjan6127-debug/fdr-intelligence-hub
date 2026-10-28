@@ -13,6 +13,7 @@ import { getActiveRules } from "@/lib/services/core";
 import { OFFICER_ROLES, OPEN_CASE_STATUSES } from "@/lib/transitions";
 import { caseInclude, userNames, whyFor } from "@/lib/views";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "Verification queue" };
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function OfficerQueue({ searchParams }: { searchParams: Pro
     include: caseInclude,
   });
   const names = await userNames(cases.flatMap((c) => c.clearances.map((x) => x.decidedById)));
-  const now = new Date();
+  const now = await appNow();
   const rows = cases
     .map((c) => ({ c, w: whyFor(c, rules.caseSlaDays, names, now) }))
     .sort((a, b) => b.c.instrument.institution.riskScore - a.c.instrument.institution.riskScore || +a.c.openedAt - +b.c.openedAt);

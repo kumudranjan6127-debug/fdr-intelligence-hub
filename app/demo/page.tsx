@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, ClipboardList, KeyRound, PlayCircle } from "lucide-react";
+import { Suspense } from "react";
 import { PublicShell } from "@/components/app-shell";
+import { DemoClockControl } from "@/components/demo-clock";
 import { signInAs } from "@/app/actions";
 import { demoPassword, isDemoMode } from "@/lib/auth";
 import { allChains, analyzeChain } from "@/lib/chain";
@@ -9,6 +11,9 @@ import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { toChainNode } from "@/lib/services/core";
 import { currentUser } from "@/lib/session";
+import { shiftedNow } from "@/lib/clock";
+import { demoOffsetDays } from "@/lib/demo-clock";
+import { fmtDate, toDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Judge's demo guide" };
@@ -32,6 +37,8 @@ const CAPABILITIES: [string, string, [string, string][]][] = [
 export default async function DemoGuide() {
   const [user, lang] = await Promise.all([currentUser(), getLang()]);
   const demo = isDemoMode();
+  const offset = await demoOffsetDays();
+  const real = new Date();
   const [release, valid, revoked, instruments] = await Promise.all([
     db.case.findFirst({ where: { type: "RELEASE", status: "CLEARANCES_PENDING" }, select: { id: true } }),
     db.noc.findFirst({ where: { revokedAt: null }, orderBy: { issuedAt: "desc" }, select: { code: true } }),
@@ -215,6 +222,41 @@ export default async function DemoGuide() {
           </div>
         </article>
       </div>
+
+      {demo && (
+        <>
+          <h2 id="clock" className="mt-10 scroll-mt-6 text-xl font-bold tracking-tight text-navy">
+            Demo clock
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Move time forward to watch deposits expire and mature, reminders become due, unclaimed deposits appear and the protection gap grow. The clock is yours alone (this
+            browser), it changes what pages compute, and recorded events keep their real dates. While it is ahead, “Run maturity job” only previews that date and saves nothing.
+          </p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+            <section className="card-surface p-5">
+              <Suspense>
+                <DemoClockControl demoDate={fmtDate(shiftedNow(offset, real))} realDate={fmtDate(real)} offset={offset} minDate={toDay(real)} />
+              </Suspense>
+            </section>
+            <section className="card-surface p-5 text-sm">
+              <h3 className="font-semibold">What to watch after moving the clock</h3>
+              <ul className="mt-2 space-y-2">
+                {[
+                  ["+30 days", "Ganga Valley's FDR passes maturity: it moves from Expiring to Matured on the dashboard, and the protection gap grows."],
+                  ["+90 days", "More deposits enter the 90-day window; the maturity calendar and the registry's “Expiring” chip change."],
+                  ["+365 days", "Many FDRs are past maturity and unrenewed: the Matured tile and the protection gap jump, and open cases show long waits against their SLA."],
+                  ["Run maturity job", "On the dashboard: previews the status changes and reminders that would go out on the demo date."],
+                ].map(([k, v]) => (
+                  <li key={k} className="flex gap-2">
+                    <span className="w-24 shrink-0 font-semibold text-violet-800">{k}</span>
+                    <span className="text-muted-foreground">{v}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </>
+      )}
 
       <h2 id="coverage" className="mt-10 scroll-mt-6 text-xl font-bold tracking-tight text-navy">
         Problem statement coverage

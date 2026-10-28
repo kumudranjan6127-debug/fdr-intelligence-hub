@@ -15,6 +15,7 @@ import { loadRegistry } from "@/lib/services/registry";
 import { requirePageUser } from "@/lib/session";
 import { OPEN_CASE_STATUSES } from "@/lib/transitions";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "Institution dashboard" };
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function InstitutionHome() {
     },
     orderBy: { createdAt: "desc" },
   });
-  const now = new Date();
+  const now = await appNow();
   const live = instruments.filter((i) => !HISTORY.includes(i.status));
   const history = instruments.filter((i) => HISTORY.includes(i.status));
   const reminders = instruments.flatMap((i) => i.reminders.map((r) => ({ ...r, code: i.code, instrumentId: i.id }))).sort((a, b) => +b.createdAt - +a.createdAt);

@@ -40,3 +40,18 @@ test("the demo guide signs a judge in and opens the scenario's screen", async ({
   await expect(page).toHaveURL(/\/registry\?q=/);
   await expect(page.getByRole("heading", { name: "FDR registry" })).toBeVisible();
 });
+
+test("the demo clock moves this browser's portal date, previews the maturity job and saves nothing", async ({ page }) => {
+  await signInAs(page, "Arjun Mehta");
+  const reminders = await testDb.reminder.count();
+  await page.goto("/demo#clock");
+  await page.getByRole("button", { name: "+30 days" }).first().click();
+  await expect(page.getByText(/Demo clock:/)).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page.getByText("DEMO", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Preview maturity job/ }).click();
+  await expect(page.getByText(/Nothing was saved/).first()).toBeVisible();
+  expect(await testDb.reminder.count()).toBe(reminders);
+  await page.getByRole("button", { name: "Back to today" }).first().click();
+  await expect(page.getByText(/Demo clock:/)).toHaveCount(0);
+});

@@ -57,7 +57,7 @@ export function canView(user: SessionUser, ins: { institutionId: string; bankId:
   return true;
 }
 
-export async function loadInstrument(id: string) {
+export async function loadInstrument(id: string, now = new Date()) {
   const ins = await db.instrument.findUnique({
     where: { id },
     include: {
@@ -86,7 +86,7 @@ export async function loadInstrument(id: string) {
     rulesVersion: version,
     anchored,
     openCases,
-    why: openCases.map((c) => ({ case: c, why: whyFor(c, rules.caseSlaDays, names) })),
+    why: openCases.map((c) => ({ case: c, why: whyFor(c, rules.caseSlaDays, names, now) })),
     names,
   };
 }

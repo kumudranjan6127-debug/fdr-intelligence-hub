@@ -5,6 +5,7 @@ import { fmtDate, formatINR } from "@/lib/format";
 import { effectiveValue, tierFieldsOf } from "@/lib/provenance";
 import { requirePageUser } from "@/lib/session";
 import { OFFICER_ROLES } from "@/lib/transitions";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "Notice draft" };
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function NoticeDraft({ params }: { params: Promise<{ id: st
   const ins = await db.instrument.findUnique({ where: { id }, include: { institution: true } });
   if (!ins) notFound();
   const f = tierFieldsOf(ins);
-  const today = fmtDate(new Date());
+  const today = fmtDate(await appNow());
   const text = `No. AICTE/RB/SD/${ins.code}                                                  Date: ${today}
 
 To

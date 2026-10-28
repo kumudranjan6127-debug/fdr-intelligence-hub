@@ -16,6 +16,7 @@ import { getActiveRules, toChainNode } from "@/lib/services/core";
 import { allChains, analyzeChain, buildChain } from "@/lib/chain";
 import { OFFICER_ROLES, OPEN_CASE_STATUSES } from "@/lib/transitions";
 import { cn } from "@/lib/utils";
+import { appNow, demoOffsetDays } from "@/lib/demo-clock";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ const BUCKETS = [
 
 export default async function Dashboard() {
   const user = await requirePageUser(OFFICER_ROLES);
-  const now = new Date();
+  const now = await appNow();
   const { rules } = await getActiveRules(db);
   const [{ rows: registry }, instruments, openCases, discrepancies, reminders, institutions] = await Promise.all([
     loadRegistry(db, now),
@@ -55,7 +56,9 @@ export default async function Dashboard() {
   // U7 — past the 10-year term (from the chain's first deposit), matured, and no release application.
   const nodes = instruments.map(toChainNode);
   const unclaimed = instruments
-    .filter((i) => i.status === "MATURED" && !i.cases.some((c) => c.type === "RELEASE" && !["REJECTED", "WITHDRAWN"].includes(c.status)))
+    // Matured in the database, or past maturity at the (demo) date before the daily job has caught up.
+    .filter((i) => i.status === "MATURED" || (["ACTIVE", "EXPIRING"].includes(i.status) && !!mat(i) && daysBetween(now, mat(i)!) < 0))
+    .filter((i) => !i.cases.some((c) => c.type === "RELEASE" && !["REJECTED", "WITHDRAWN"].includes(c.status)))
     .map((i) => {
       const root = buildChain(nodes, i.id)[0];
       const start = root?.issueDate ?? normalize("issueDate", bestEvidence(tierFieldsOf(i).issueDate).value);
@@ -97,7 +100,7 @@ export default async function Dashboard() {
         crumbs={[{ label: "Home", href: "/officer" }, { label: "Dashboard" }]}
         title="Security deposit dashboard"
         subtitle={`${instruments.length} instruments · ${formatLakh(held)} principal held with AICTE · as of ${fmtDateTime(now)}`}
-        actions={["RO", "BUREAU", "ADMIN", "AUTHORITY"].includes(user.role) ? <MaturityJobButton /> : null}
+        actions={["RO", "BUREAU", "ADMIN", "AUTHORITY"].includes(user.role) ? <MaturityJobButton preview={(await demoOffsetDays()) > 0} /> : null}
       />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">

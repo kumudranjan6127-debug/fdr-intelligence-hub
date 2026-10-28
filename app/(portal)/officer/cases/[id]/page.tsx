@@ -21,6 +21,7 @@ import { getActiveRules } from "@/lib/services/core";
 import { CASE_ACTIONS, OFFICER_ROLES, OPEN_CASE_STATUSES, availableActions, type CaseAction } from "@/lib/transitions";
 import { caseInclude, canView, penaltyPreview, userNames, whyFor } from "@/lib/views";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "Case review" };
 export const dynamic = "force-dynamic";
@@ -48,7 +49,8 @@ export default async function CaseReview({ params, searchParams }: { params: Pro
     db.event.findMany({ where: { instrumentId: c.instrumentId, caseId: null }, include: { actor: { select: { name: true } } }, orderBy: { seq: "desc" }, take: 15 }),
   ]);
   const names = await userNames(c.clearances.map((x) => x.decidedById));
-  const w = whyFor(c, rules.caseSlaDays, names);
+  const now = await appNow();
+  const w = whyFor(c, rules.caseSlaDays, names, now);
   const fields = tierFieldsOf(c.instrument);
   const ins = c.instrument;
   const actions = availableActions(c, user.role);
@@ -57,7 +59,7 @@ export default async function CaseReview({ params, searchParams }: { params: Pro
   const open = OPEN_CASE_STATUSES.includes(c.status);
   const selected = docs.find((d) => d.id === docParam) ?? docs.filter((d) => d.kind === "FDR_COPY").at(-1) ?? docs[0];
   const isRelease = c.type === "RELEASE";
-  const preview = isRelease ? penaltyPreview(c, rules) : null;
+  const preview = isRelease ? penaltyPreview(c, rules, now) : null;
   const recordedPenalty = c.penaltyPct !== null;
   const events = [...c.events, ...instrumentEvents].sort((a, b) => b.seq - a.seq);
   const highCount = discrepancies.filter((d) => d.severity === "HIGH").length;

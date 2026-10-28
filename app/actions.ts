@@ -1,6 +1,7 @@
 "use server";
 // Server actions. Zod on every input; role checks happen server-side in each command.
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { DocumentKind } from "@prisma/client";
@@ -13,6 +14,8 @@ import { endSession, homeFor, requireRole, startSession } from "@/lib/session";
 import { storeFile } from "@/lib/storage";
 import { CASE_ACTIONS, TransitionError, type CaseAction } from "@/lib/transitions";
 import { toDay } from "@/lib/format";
+import { DEMO_CLOCK_COOKIE, offsetForDate, parseOffset } from "@/lib/clock";
+import { appNow, demoOffsetDays } from "@/lib/demo-clock";
 import { runMaturityJob, type MaturityJobResult } from "@/lib/services/maturity";
 import { addInstrumentDocument, applyForRelease, createSubmission, decideClearance, fetchBankConfirmation, performCaseAction, revokeNoc } from "@/lib/services/workflow";
 
@@ -34,6 +37,25 @@ async function guard(fn: () => Promise<string | void>, paths: string[] = []): Pr
   } catch (e) {
     return { error: messageOf(e) };
   }
+}
+
+// ───────── demo clock ─────────
+
+/**
+ * Moves this browser's demo clock: `add` days forward, to a `date`, or back to today with `reset`.
+ * Demo mode only. Pages compute from the moved date; recorded events keep their real timestamps.
+ */
+export async function setDemoClock(formData: FormData) {
+  const next = String(formData.get("next") ?? "");
+  const back = /^\/(?![/\\])/.test(next) ? next : "/demo";
+  if (!isDemoMode()) redirect(back);
+  const jar = await cookies();
+  const current = parseOffset(jar.get(DEMO_CLOCK_COOKIE)?.value);
+  const date = String(formData.get("date") ?? "");
+  const offset = formData.get("reset") ? 0 : date ? offsetForDate(date) : parseOffset(current + Number(formData.get("add") ?? 0));
+  if (offset === 0) jar.delete(DEMO_CLOCK_COOKIE);
+  else jar.set(DEMO_CLOCK_COOKIE, String(offset), { path: "/", sameSite: "lax", httpOnly: true, secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 12 });
+  redirect(back);
 }
 
 // ───────── session ─────────
@@ -244,7 +266,11 @@ export type MaturityActionState = ({ result?: MaturityJobResult } & NonNullable<
 export async function runMaturityAction(_prev: MaturityActionState): Promise<MaturityActionState> {
   try {
     await requireRole(["RO", "BUREAU", "ADMIN", "AUTHORITY"]);
-    const result = await runMaturityJob(db);
+    // With the demo clock moved forward the job only previews that date: live data stays as it is.
+    const offset = await demoOffsetDays();
+    const result = await runMaturityJob(db, await appNow(), { dryRun: offset > 0 });
+    if (result.dryRun)
+      return { ok: `Preview at the demo date: ${result.statusChanges.length} status changes and ${result.remindersCreated.length} reminders would go out. Nothing was saved.`, result };
     revalidatePath("/", "layout");
     return { ok: `Checked ${result.checked} instruments · ${result.statusChanges.length} status changes · ${result.remindersCreated.length} reminders sent`, result };
   } catch (e) {

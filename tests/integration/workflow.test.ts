@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { verifyEventChain } from "@/lib/events";
 import { extractFdr } from "@/lib/extract";
 import { storeFile } from "@/lib/storage";
+import { runMaturityJob } from "@/lib/services/maturity";
 import { verifyNoc } from "@/lib/services/noc";
 import { createSubmission, decideClearance, fetchBankConfirmation, performCaseAction } from "@/lib/services/workflow";
 import { tierFieldsOf } from "@/lib/provenance";
@@ -148,6 +149,17 @@ describe("evidence controls outside demo mode", () => {
     } finally {
       process.env.DEMO_MODE = "1";
     }
+  });
+});
+
+describe("demo clock preview", () => {
+  it("a maturity job run a year ahead as a dry run reports changes but writes nothing", async () => {
+    const before = await Promise.all([db.reminder.count(), db.event.count(), db.instrument.groupBy({ by: ["status"], _count: true })]);
+    const r = await runMaturityJob(db, new Date(Date.now() + 365 * 86_400_000), { dryRun: true });
+    expect(r.dryRun).toBe(true);
+    expect(r.statusChanges.length + r.remindersCreated.length).toBeGreaterThan(0);
+    const after = await Promise.all([db.reminder.count(), db.event.count(), db.instrument.groupBy({ by: ["status"], _count: true })]);
+    expect(after).toEqual(before);
   });
 });
 

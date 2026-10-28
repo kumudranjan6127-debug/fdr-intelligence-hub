@@ -1,5 +1,6 @@
 // Validity & maturity tracking. Recomputes EXPIRING / MATURED and creates in-app reminders.
 // Idempotent: reminders are unique per (instrument, kind), status changes only happen when needed.
+// With dryRun it only reports what it would do (the demo clock previews a future date this way).
 import type { PrismaClient, ReminderKind } from "@prisma/client";
 import { SYSTEM, recordEvent } from "../events";
 import { addDays, daysBetween, fmtDate, parseDay } from "../format";
@@ -12,11 +13,13 @@ export type MaturityJobResult = {
   checked: number;
   statusChanges: { code: string; from: string; to: string }[];
   remindersCreated: { code: string; kind: ReminderKind; message: string }[];
+  dryRun: boolean;
 };
 
-export async function runMaturityJob(db: PrismaClient, now = new Date()): Promise<MaturityJobResult> {
+export async function runMaturityJob(db: PrismaClient, now = new Date(), opts: { dryRun?: boolean } = {}): Promise<MaturityJobResult> {
+  const dryRun = !!opts.dryRun;
   const { rules } = await getActiveRules(db, now);
-  const result: MaturityJobResult = { ranAt: now.toISOString(), checked: 0, statusChanges: [], remindersCreated: [] };
+  const result: MaturityJobResult = { ranAt: now.toISOString(), checked: 0, statusChanges: [], remindersCreated: [], dryRun };
 
   const holding = await db.instrument.findMany({
     where: { status: { in: ["ACTIVE", "EXPIRING", "MATURED"] } },
@@ -30,9 +33,10 @@ export async function runMaturityJob(db: PrismaClient, now = new Date()): Promis
 
   const remind = async (instrumentId: string, code: string, have: ReminderKind[], kind: ReminderKind, dueAt: Date, message: string) => {
     if (have.includes(kind)) return;
+    result.remindersCreated.push({ code, kind, message });
+    if (dryRun) return;
     await db.reminder.create({ data: { instrumentId, kind, dueAt, message, sentAt: now, channel: "INAPP" } });
     await recordEvent(db, { instrumentId, actor: SYSTEM, action: "REMINDER_SENT", after: { kind, channel: "INAPP", message }, at: now });
-    result.remindersCreated.push({ code, kind, message });
   };
 
   for (const ins of holding) {
@@ -40,9 +44,11 @@ export async function runMaturityJob(db: PrismaClient, now = new Date()): Promis
     const mat = normalize("maturityDate", bestEvidence(tierFieldsOf(ins).maturityDate).value);
     const next = holdingStatus(mat, now, rules.expiringWindowDays);
     if (next !== ins.status) {
+      result.statusChanges.push({ code: ins.code, from: ins.status, to: next });
+    }
+    if (next !== ins.status && !dryRun) {
       await db.instrument.update({ where: { id: ins.id }, data: { status: next } });
       await recordEvent(db, { instrumentId: ins.id, actor: SYSTEM, action: "STATUS_RECOMPUTED", before: { status: ins.status }, after: { status: next }, reason: `Maturity ${fmtDate(mat)}`, at: now });
-      result.statusChanges.push({ code: ins.code, from: ins.status, to: next });
     }
     if (!mat) continue;
 
@@ -75,6 +81,7 @@ export async function runMaturityJob(db: PrismaClient, now = new Date()): Promis
     await remind(ins.id, ins.code, [], "AFFIDAVIT_DUE", ins.affidavitDueAt!, `Affidavit for ${ins.code} is due by ${fmtDate(ins.affidavitDueAt)}. Late submission attracts 10% / 20% penalty (APH cl. 2.25(f)).`);
   }
 
+  if (dryRun) return result;
   const all = await db.instrument.findMany({ select: { id: true, institutionId: true } });
   for (const i of all) await syncDiscrepancies(db, i.id, now);
   for (const inst of new Set(all.map((i) => i.institutionId))) await recomputeRisk(db, inst, now);

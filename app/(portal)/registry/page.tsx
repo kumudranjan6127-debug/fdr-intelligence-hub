@@ -10,6 +10,7 @@ import { CATEGORIES, SORTS, asCategory, inCategory, matches, type SortKey } from
 import { queryRegistry } from "@/lib/services/registry";
 import { requirePageUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { appNow } from "@/lib/demo-clock";
 
 export const metadata = { title: "FDR registry" };
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export default async function RegistryPage({ searchParams }: { searchParams: Pro
   const sort: SortKey = (SORTS as readonly string[]).includes(sp.sort ?? "") ? (sp.sort as SortKey) : "submitted";
   const dir = sp.dir === "asc" ? "asc" : "desc";
   const cat = asCategory(sp.cat);
-  const { rows, all, parsed } = await queryRegistry(db, { q: sp.q, cat, sort, dir });
+  const { rows, all, parsed } = await queryRegistry(db, { q: sp.q, cat, sort, dir }, await appNow());
   const pages = Math.ceil(rows.length / PAGE);
   const page = Math.max(1, Math.min(pages || 1, Number(sp.page) || 1));
   const shown = rows.slice((page - 1) * PAGE, page * PAGE);
