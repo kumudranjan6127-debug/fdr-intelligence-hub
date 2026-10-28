@@ -116,5 +116,5 @@ test("5 · release: legal clears, the authority approves and issues a NOC, anyon
 test("audit trail re-verifies the whole hash chain", async ({ page }) => {
   await signInAs(page, "Arjun Mehta");
   await page.goto("/audit");
-  await expect(page.getByText(/Hash chain intact — all \d+ events re-verified/)).toBeVisible();
+  await expect(page.getByText(/Hash chain intact: all \d+ events re-verified/)).toBeVisible();
 });
