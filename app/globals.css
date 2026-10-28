@@ -167,6 +167,12 @@ html[data-contrast="high"] :focus-visible {
   .tricolor {
     background: linear-gradient(90deg, var(--color-saffron) 0 33.3%, #fff 33.3% 66.6%, var(--color-india-green) 66.6% 100%);
   }
+  /* A tinted band whose background reaches the window edges while its content keeps the page width. */
+  .band-bleed {
+    background: var(--color-navy-soft);
+    box-shadow: 0 0 0 100vmax var(--color-navy-soft);
+    clip-path: inset(0 -100vmax);
+  }
   .card-surface {
     @apply rounded-xl border bg-card shadow-(--shadow-card);
   }

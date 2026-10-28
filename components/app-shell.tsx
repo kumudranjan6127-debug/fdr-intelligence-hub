@@ -1,11 +1,15 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Role } from "@prisma/client";
-import { ChevronRight } from "lucide-react";
+import { Bell, CalendarDays, Info } from "lucide-react";
 import { signOut } from "@/app/actions";
-import { homeFor, type SessionUser } from "@/lib/session";
+import { fmtDate } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { getLang } from "@/lib/lang";
-import { BrandMark, GovFrame, GovTopBar, PageBand, type NavKey } from "./gov-chrome";
-import { MobileNav, SidebarNav, type NavItem } from "./sidebar-nav";
+import { recentNoticeCount } from "@/lib/services/notifications";
+import { homeFor, type SessionUser } from "@/lib/session";
+import { BrandMark, GovFooter, GovFrame, GovTopBar, PageBand, type NavKey } from "./gov-chrome";
+import { PortalNav, UserMenu, type NavItem } from "./portal-nav";
 
 export const ROLE_LABEL: Record<Role, string> = {
   INSTITUTION: "Institution",
@@ -18,20 +22,25 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 const OFFICER: NavItem[] = [
-  { href: "/officer", label: "Verification queue", icon: "inbox" },
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/officer", label: "Verification queue", icon: "inbox" },
+  { href: "/registry", label: "FDR registry", icon: "registry" },
+  { href: "/officer?view=all&type=RELEASE", label: "Release cases", icon: "release" },
+  { href: "/notifications", label: "Notifications", icon: "bell" },
   { href: "/audit", label: "Audit trail", icon: "audit" },
   { href: "/verify", label: "Verify a NOC", icon: "verify" },
 ];
 
 export const NAV: Record<Role, NavItem[]> = {
   INSTITUTION: [
-    { href: "/institution", label: "My deposits", icon: "wallet" },
-    { href: "/institution/submit", label: "Submit instrument", icon: "submit" },
+    { href: "/institution", label: "Dashboard", icon: "dashboard" },
+    { href: "/institution/submit", label: "Submit FDR", icon: "submit" },
+    { href: "/notifications", label: "Notifications", icon: "bell" },
     { href: "/verify", label: "Verify a NOC", icon: "verify" },
   ],
   BANK: [
     { href: "/bank", label: "NOC inbox", icon: "bank" },
+    { href: "/notifications", label: "Notifications", icon: "bell" },
     { href: "/verify", label: "Verify a NOC", icon: "verify" },
   ],
   RO: OFFICER,
@@ -40,22 +49,6 @@ export const NAV: Record<Role, NavItem[]> = {
   AUTHORITY: OFFICER,
   ADMIN: OFFICER,
 };
-
-function Brand({ compact, href = "/" }: { compact?: boolean; href?: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-2.5">
-      <BrandMark className="size-9 shrink-0" />
-      {!compact && (
-        <span className="leading-tight">
-          <span className="block text-[15px] font-bold tracking-tight text-navy">FDR Intelligence Hub</span>
-          <span lang="hi" className="block text-[11px] font-semibold text-saffron-deep">
-            एफडीआर इंटेलिजेंस हब
-          </span>
-        </span>
-      )}
-    </Link>
-  );
-}
 
 function initials(name: string) {
   return name
@@ -67,62 +60,69 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function UserCard({ user }: { user: SessionUser }) {
-  const org = user.institution?.name.split(",")[0] ?? user.bank?.name ?? user.designation ?? "";
-  return (
-    <div className="rounded-xl border bg-muted/40 p-3">
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(user.name)}</span>
-        <div className="min-w-0 leading-tight">
-          <div className="truncate text-sm font-medium">{user.name}</div>
-          <div className="truncate text-xs text-muted-foreground">
-            {ROLE_LABEL[user.role]}
-            {user.cell ? ` · ${user.cell.toLowerCase()}` : ""}
-          </div>
-        </div>
-      </div>
-      {org && <div className="mt-2 truncate text-xs text-muted-foreground" title={org}>{org}</div>}
-      <form action={signOut} className="mt-2.5">
-        <button className="w-full rounded-lg border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted">Switch user</button>
-      </form>
-    </div>
-  );
-}
-
-/** Signed-in portal: government top bar, then a left sidebar on desktop and a collapsible menu on mobile. */
+/** Signed-in portal: the government top bar, an identity header with the bell and user menu, a role menu bar. */
 export async function PortalShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
-  const items = NAV[user.role];
-  const lang = await getLang();
+  const [lang, notices] = await Promise.all([getLang(), recentNoticeCount(user)]);
+  const org = user.institution?.name.split(",")[0] ?? user.bank?.name ?? user.designation ?? "";
+  const role = `${ROLE_LABEL[user.role]}${user.cell ? ` · ${user.cell.toLowerCase()} cell` : ""}`;
   return (
-    <div className="min-h-screen">
-      <GovTopBar lang={lang} />
-      <div className="tricolor h-1 w-full" aria-hidden />
-      <div className="lg:flex">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r bg-card lg:flex">
-          <div className="px-5 py-5">
-            <Brand href={homeFor(user.role)} />
+    <div className="flex min-h-screen flex-col">
+      <GovTopBar lang={lang} wide />
+      <header className="border-b bg-card">
+        <div className="tricolor h-1 w-full" aria-hidden />
+        <div className="mx-auto flex max-w-350 items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-5">
+            <Link href={homeFor(user.role)} className="flex min-w-0 items-center gap-3">
+              <BrandMark className="size-10 shrink-0 sm:size-11" />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-base font-bold tracking-tight text-navy sm:text-lg">FDR Intelligence Hub</span>
+                <span lang="hi" className="block truncate text-xs font-semibold text-saffron-deep">
+                  एफडीआर इंटेलिजेंस हब
+                </span>
+                <span className="hidden truncate text-[11px] text-muted-foreground sm:block">{t(lang, "brandTagline")}</span>
+              </span>
+            </Link>
+            <div className="hidden border-l pl-5 leading-tight xl:block">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{t(lang, "prototypeFor")}</div>
+              <div className="text-sm font-semibold">{t(lang, "bureau")}</div>
+              <div className="text-xs text-muted-foreground">{t(lang, "council")}</div>
+            </div>
           </div>
-          <div className="px-3">
-            <div className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{ROLE_LABEL[user.role]}</div>
-            <SidebarNav items={items} />
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <span className="hidden items-center gap-1.5 rounded-full border bg-muted/60 px-3 py-1 text-xs text-foreground/80 lg:inline-flex">
+              <CalendarDays className="size-3.5" aria-hidden />
+              {t(lang, "today")}: <strong className="font-semibold">{fmtDate(new Date())}</strong>
+            </span>
+            <Link
+              href="/notifications"
+              aria-label={`Notifications${notices ? `: ${notices} in the last 7 days` : ""}`}
+              title="Notifications"
+              className="relative flex size-10 items-center justify-center rounded-full border bg-card hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <Bell className="size-[18px] text-foreground/80" aria-hidden />
+              {notices > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white ring-2 ring-card">
+                  {notices > 99 ? "99+" : notices}
+                </span>
+              )}
+            </Link>
+            <UserMenu name={user.name} initials={initials(user.name)} role={role} org={org} homeHref={homeFor(user.role)} signOut={signOut} />
           </div>
-          <div className="mt-auto space-y-3 p-3">
-            <UserCard user={user} />
-            <p className="px-1 text-[10px] leading-snug text-muted-foreground">SIH26265 prototype · fictional data · Mock AA sandbox</p>
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-card/95 px-4 py-2.5 backdrop-blur lg:hidden">
-            <Brand compact href={homeFor(user.role)} />
-            <MobileNav items={items} userName={user.name} role={ROLE_LABEL[user.role]} />
-          </header>
-          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-350 px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-8">
-            {children}
-          </main>
-          <Footer />
         </div>
+      </header>
+      <Suspense fallback={<div className="h-11 bg-gov-blue" />}>
+        <PortalNav items={NAV[user.role]} label={t(lang, "menu")} />
+      </Suspense>
+      <div className="border-b border-amber-200 bg-amber-50 text-amber-950">
+        <p className="mx-auto flex max-w-350 items-start gap-2 px-4 py-1.5 text-xs leading-relaxed sm:px-6 lg:px-8">
+          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          Prototype for SIH 2026 · fictional institutions, banks and people · bank confirmation via Mock AA sandbox · not an official AICTE website
+        </p>
       </div>
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-350 flex-1 px-4 pb-10 outline-none sm:px-6 lg:px-8">
+        {children}
+      </main>
+      <GovFooter lang={lang} wide />
     </div>
   );
 }
@@ -139,43 +139,33 @@ export function PublicShell({ user, children, wide, active, band }: { user: Sess
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t">
-      <div className="mx-auto max-w-350 px-4 py-4 text-xs leading-relaxed text-muted-foreground sm:px-6 lg:px-8">
-        All institutions, banks and people are fictional · bank confirmation via <strong className="font-medium text-foreground/80">Mock AA sandbox</strong> · hashes anchored in DB (ledger in Phase 3).{" "}
-        <strong className="font-medium text-foreground/80">A matching hash proves a record is unchanged, not that a bank issued it</strong> — authenticity comes from the bank.
-      </div>
-    </footer>
-  );
-}
-
 export type Crumb = { label: string; href?: string };
 
+/**
+ * Portal page title band: breadcrumb, title, one-line description and actions. The tinted background
+ * bleeds to the window edges while the text stays aligned with the page content.
+ */
 export function PageHeader({ title, subtitle, actions, crumbs, eyebrow }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode; crumbs?: Crumb[]; eyebrow?: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      {crumbs && crumbs.length > 0 && (
-        <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-          {crumbs.map((c, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <ChevronRight className="size-3" aria-hidden />}
-              {c.href ? (
-                <Link href={c.href} className="hover:text-foreground hover:underline">
-                  {c.label}
-                </Link>
-              ) : (
-                <span className="text-foreground/80">{c.label}</span>
-              )}
-            </span>
-          ))}
-        </nav>
-      )}
+    <div className="band-bleed mb-6 py-6">
+      <nav aria-label="Breadcrumb" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        {(crumbs?.length ? crumbs : eyebrow ? [{ label: String(eyebrow) }] : []).map((c, i) => (
+          <span key={i} className="flex items-center gap-1.5">
+            {i > 0 && <span aria-hidden>›</span>}
+            {c.href ? (
+              <Link href={c.href} className="hover:text-foreground hover:underline">
+                {c.label}
+              </Link>
+            ) : (
+              <span className="text-foreground/80">{c.label}</span>
+            )}
+          </span>
+        ))}
+      </nav>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          {eyebrow && <div className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">{eyebrow}</div>}
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
-          {subtitle && <div className="mt-1.5 text-sm text-muted-foreground">{subtitle}</div>}
+          <h1 className="text-2xl font-bold tracking-tight text-navy sm:text-[28px]">{title}</h1>
+          {subtitle && <div className="mt-1 text-sm text-muted-foreground">{subtitle}</div>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>

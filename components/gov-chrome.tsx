@@ -36,10 +36,10 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-export function GovTopBar({ lang }: { lang: Lang }) {
+export function GovTopBar({ lang, wide }: { lang: Lang; wide?: boolean }) {
   return (
     <div className="bg-navy text-[12px] text-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-1.5 sm:px-6">
+      <div className={cn("mx-auto flex items-center justify-between gap-3 px-4 py-1.5 sm:px-6", wide ? "max-w-350 lg:px-8" : "max-w-6xl")}>
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 rounded-full border border-saffron/70 bg-white/10 px-2 py-px text-[11px] font-semibold">SIH 2026</span>
           <span className="hidden truncate text-white/85 md:inline">{t(lang, "sihLine")}</span>
@@ -143,7 +143,8 @@ export function Disclaimer({ lang }: { lang: Lang }) {
 
 const BUILD_DATE = process.env.BUILD_DATE;
 
-export function GovFooter({ lang }: { lang: Lang }) {
+export function GovFooter({ lang, wide }: { lang: Lang; wide?: boolean }) {
+  const width = wide ? "max-w-350 lg:px-8" : "max-w-6xl";
   const links: [string, Parameters<typeof t>[1]][] = [
     ["/", "navHome"],
     ["/verify", "navVerify"],
@@ -155,7 +156,7 @@ export function GovFooter({ lang }: { lang: Lang }) {
   return (
     <footer className="mt-auto bg-navy text-white">
       <div className="tricolor h-1 w-full" aria-hidden />
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1.2fr]">
+      <div className={cn("mx-auto grid gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1.2fr]", width)}>
         <div>
           <div className="flex items-center gap-2.5">
             <BrandMark className="size-9" />
@@ -188,7 +189,7 @@ export function GovFooter({ lang }: { lang: Lang }) {
         </div>
       </div>
       <div className="border-t border-white/15">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs leading-relaxed text-white/65 sm:px-6 md:flex-row md:items-start md:justify-between md:gap-8">
+        <div className={cn("mx-auto flex flex-col gap-2 px-4 py-4 text-xs leading-relaxed text-white/65 sm:px-6 md:flex-row md:items-start md:justify-between md:gap-8", width)}>
           <p className="max-w-3xl">
             {t(lang, "disclaimer")} {t(lang, "footBoundary")}
           </p>
