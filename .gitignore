@@ -44,3 +44,7 @@ next-env.d.ts
 
 # local scratch
 /scratch
+
+# local editor settings and screenshot output
+.vscode/
+shots-check/
