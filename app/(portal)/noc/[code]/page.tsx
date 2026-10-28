@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 import QRCode from "qrcode";
 import { ActionForm, SubmitButton } from "@/components/action-form";
+import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { revokeNocAction } from "@/app/actions";
 import { db } from "@/lib/db";
@@ -15,7 +17,7 @@ import { canView } from "@/lib/views";
 export const metadata = { title: "Lien-release NOC" };
 export const dynamic = "force-dynamic";
 
-// The NOC "letter" — a styled HTML page (PDF generation is Phase 7). The QR points at /verify/:code.
+// The NOC "letter" — a styled HTML page, also downloadable as a PDF (/api/noc/:code/pdf). The QR points at /verify/:code.
 export default async function NocLetter({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const user = await requirePageUser();
@@ -110,7 +112,11 @@ export default async function NocLetter({ params }: { params: Promise<{ code: st
           </footer>
         </article>
 
-        <div className="flex flex-wrap gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <a href={`/api/noc/${noc.code}/pdf`} download className={buttonVariants({ size: "sm" })}>
+            <Download className="size-4" aria-hidden />
+            Download PDF
+          </a>
           <Link href={`/verify/${noc.code}`} className="text-primary hover:underline">
             Open verification page →
           </Link>

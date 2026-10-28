@@ -85,7 +85,16 @@ test("5 · release: legal clears, the authority approves and issues a NOC, anyon
   await expect(page.getByText(/^NOC-2026-/).first()).toBeVisible();
   const noc = await testDb.noc.findFirstOrThrow({ where: { caseId: k.id }, orderBy: { issuedAt: "desc" } });
 
+  await page.goto(`/noc/${noc.code}`);
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download PDF" }).click();
+  expect((await download).suggestedFilename()).toBe(`${noc.code}.pdf`);
+  const pdf = await page.request.get(`/api/noc/${noc.code}/pdf`);
+  expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+
   await page.context().clearCookies();
+  expect((await page.request.get(`/api/noc/${noc.code}/pdf`)).status()).toBe(404);
   await page.goto(`/verify/${noc.code}`);
   await expect(page.getByText("Valid NOC")).toBeVisible();
   await expect(page.getByText(/not a genuine bank confirmation/)).toBeVisible();

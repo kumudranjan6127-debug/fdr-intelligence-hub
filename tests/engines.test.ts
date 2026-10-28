@@ -396,3 +396,48 @@ describe("duplicate FDR detection", () => {
     expect(levenshtein("abc", "abc")).toBe(0);
   });
 });
+
+describe("NOC PDF", () => {
+  const payload = {
+    code: "NOC-2026-ABC123",
+    caseCode: "REL-2026-0001",
+    issuedAt: "2026-10-20T06:30:00.000Z",
+    issuer: { name: "Dr. Kavita Rao", designation: "Competent Authority", office: "AICTE Regulation Bureau, New Delhi" },
+    addressedTo: "The Branch Manager, Bharat Union Bank",
+    institution: { name: "Konkan Institute of Technology", permanentId: "1-2345678", regionalOffice: "Mumbai" },
+    instrument: { code: "INS-1", type: "FDR" as const, bankName: "Bharat Union Bank", fdrNumber: "BUB2016000123", principalPaise: L(30) },
+    deduction: { pct: 10, amountPaise: L(3), ruleRef: "APH 2024-27 cl. 2.21(h)" },
+    payableToTrustPaise: L(27),
+    interest: "Accrued interest is payable to AICTE; only principal returns to the Trust.",
+    documents: [{ kind: "FDR_COPY", sha256: "a".repeat(64) }],
+  };
+
+  async function render(revoked: { at: Date; reason: string } | null = null) {
+    const QRCode = (await import("qrcode")).default;
+    const { renderNocPdf } = await import("@/lib/noc-pdf");
+    const qrPng = new Uint8Array(await QRCode.toBuffer("https://example.test/verify/NOC-2026-ABC123"));
+    return renderNocPdf({ payload, sha256: "f".repeat(64), verifyUrl: "https://example.test/verify/NOC-2026-ABC123", qrPng, revoked });
+  }
+
+  async function textOf(bytes: Uint8Array) {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    return (await extractText(await getDocumentProxy(new Uint8Array(bytes)), { mergePages: true })).text;
+  }
+
+  it("prints the code, amounts, hash and verify link, with rupees spelled for the PDF font", async () => {
+    const t = await textOf(await render());
+    expect(t).toContain("NOC-2026-ABC123");
+    expect(t).toContain("Rs. 30,00,000");
+    expect(t).toContain("Rs. 27,00,000");
+    expect(t).toContain("f".repeat(64));
+    expect(t).toContain("https://example.test/verify/NOC-2026-ABC123");
+    expect(t).toContain("does not by itself prove the underlying FDR is genuine");
+    expect(t).not.toContain("REVOKED");
+  });
+
+  it("marks a revoked NOC and renders the same record to the same bytes", async () => {
+    const revoked = { at: new Date("2026-10-22T00:00:00Z"), reason: "Issued on the wrong case" };
+    expect(await textOf(await render(revoked))).toContain("Issued on the wrong case");
+    expect(sha256Hex(Buffer.from(await render()))).toBe(sha256Hex(Buffer.from(await render())));
+  });
+});
