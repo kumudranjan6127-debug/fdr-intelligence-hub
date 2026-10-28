@@ -69,7 +69,7 @@ const ROADMAP: [string, string][] = [
   ["P4", "Live Account Aggregator (Setu / Finvu) and bank portal fallback"],
   ["P5", "Self-hosted PaddleOCR (English + Hindi) cross-checked with Claude"],
   ["P6", "Email, SMS and WhatsApp reminders with an escalation ladder"],
-  ["P7", "Affidavit-6 generation, Aadhaar eSign, NOC PDF with QR"],
+  ["P7", "Affidavit-6 generation, Aadhaar eSign, digitally signed NOC PDF"],
   ["P8", "Legacy Excel and portal import with duplicate merge"],
   ["P10", "Metrics: planted defects caught, turnaround with vs without AA"],
 ];

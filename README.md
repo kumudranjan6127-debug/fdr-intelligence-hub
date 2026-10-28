@@ -19,7 +19,7 @@ A verification-first portal for the security deposits / Fixed Deposit Receipts t
 | U1 | **Three-tier provenance on every field:** *Claimed* (institution) · *Extracted* (AI, with confidence) · *Confirmed* (bank). Badges always carry a text label. | FDR Passport, officer case review |
 | U2 | **Renewal chain X-ray:** a timeline of the chain, with automatic checks for coverage gaps, amount drops and missing liens | FDR Passport → Renewal chain |
 | U3 | **Account Aggregator bank verification:** an `AAProvider` interface returning the TERM_DEPOSIT shape. The MVP uses a **Mock AA sandbox**; Setu/Finvu come in Phase 4. | "Fetch bank confirmation" |
-| U4 | **Verifiable NOC:** SHA-256 anchored at issue, QR on the letter, a public `/verify/:code` page, revocation, and a byte-level tamper check | `/noc/:code`, `/verify/:code` |
+| U4 | **Verifiable NOC:** SHA-256 anchored at issue, QR on the letter and on a downloadable PDF copy, a public `/verify/:code` page, revocation, and a byte-level tamper check | `/noc/:code`, `/api/noc/:code/pdf`, `/verify/:code` |
 | U5 | **APH rules + penalty engine:** versioned JSON rules checked against the APH 2024-27 text: the Table 1.4 deposit per programme and level, lease doubling, the Government / aided exemption, the 15-day Affidavit 3 window with 10% / 20% late tiers, and release deductions of 50% (no EoA for six years, cl. 2.21(i)) or 10% (late closure documents, cl. 2.21(h); early encashment, cl. 7.7). The public `/policy` rule register quotes the clause and page for each rule and flags the handbook-vs-guidelines conflict (20% vs 50%). | Release case → Penalty; `/policy` |
 | U6 | **Institution risk score:** 40·late renewals + 30·gap days/30 + 20·open discrepancies + 10·overdue cases (cap 100). The queue is sorted by it. | `/officer`, dashboard |
 | U7 | **Unclaimed matured deposits finder:** deposits past their 10-year term with no release application, plus a one-click notice draft | Dashboard |
@@ -49,7 +49,7 @@ The first run found that the near-duplicate rule flagged unrelated same-day ₹5
 - Bank confirmation is the **Mock AA sandbox**. It reads a seeded "bank book" (`BankDepositRecord`) in the same JSON shape a real AA would return. Lien status comes from a mocked bank portal, because the AA term-deposit summary does not include liens.
 - Hashes are **anchored in the database** ("Hash anchored (DB) — ledger in Phase 3"); `LedgerAnchor.txRef` is empty until the EVM anchor lands.
 - **AI extraction never auto-accepts.** With `ANTHROPIC_API_KEY` set, Claude (`claude-opus-5-5`) reads the PDF or image into the *extracted* tier. Without a key, a local text-layer parser does the same for text PDFs and is labelled as such.
-- Sign-in uses email + password (scrypt hashes, HMAC-signed session cookie, lockout after 5 failures). With `DEMO_MODE=1` the sign-in page also lists the demo accounts for one-click sign-in; turn it off on any non-demo deployment. Notifications are in-app only. The NOC is a styled HTML letter, not a PDF.
+- Sign-in uses email + password (scrypt hashes, HMAC-signed session cookie, lockout after 5 failures). With `DEMO_MODE=1` the sign-in page also lists the demo accounts for one-click sign-in; turn it off on any non-demo deployment. Notifications are in-app only. The NOC is an HTML letter with a downloadable PDF copy (QR + record hash); neither is digitally signed yet (P7).
 - All institutions, banks, people and documents are **fictional**. Every generated PDF is stamped SPECIMEN. Rule amounts (e.g. ₹25 L per programme) are illustrative and live in the `RuleSet` JSON.
 
 ## Demo script (5 flows, brief §5.6)
@@ -143,7 +143,7 @@ tests/               engine unit tests
 | P4 Account Aggregator | Setu / Finvu sandbox consent → TERM_DEPOSIT fetch; bank portal fallback; DSC on bank PDFs |
 | P5 OCR | Self-hosted PaddleOCR (EN + HI) with LLM fallback; bounding-box evidence crops |
 | P6 Notifications | Email, SMS / WhatsApp (DLT); escalation ladder |
-| P7 Documents | Affidavit-6 auto-generation, Aadhaar eSign, NOC PDF with QR |
+| P7 Documents | Affidavit-6 auto-generation, Aadhaar eSign, DSC-signed NOC PDF (an unsigned PDF copy with QR exists today) |
 | P8 Migration | Legacy Excel / portal import with AI cleanup and duplicate merge |
 | P9 Ops | Fastify API, BullMQ workers, audit export, DPDP consent records |
 | P10 Metrics | Harness on seeded cases: % planted defects caught, reminder reliability, turnaround with vs without AA |
