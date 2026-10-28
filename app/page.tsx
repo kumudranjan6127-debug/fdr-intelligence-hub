@@ -436,12 +436,12 @@ export default async function Landing() {
             <h2 className="mt-3 text-3xl font-bold tracking-tight">{t(lang, "secJudgesTitle")}</h2>
             <p className="mt-3 max-w-xl text-white/80">{t(lang, "secJudgesBody")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={cta.href} className="inline-flex items-center gap-2 rounded-md bg-saffron px-5 py-3 text-sm font-semibold text-navy hover:bg-saffron/90">
-                {cta.label}
+              <Link href="/demo" className="inline-flex items-center gap-2 rounded-md bg-saffron px-5 py-3 text-sm font-semibold text-navy hover:bg-saffron/90">
+                {t(lang, "navDemo")}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
-              <Link href="/verify" className="inline-flex items-center gap-2 rounded-md border border-white/40 px-5 py-3 text-sm font-semibold hover:bg-white/10">
-                {t(lang, "navVerify")}
+              <Link href={cta.href} className="inline-flex items-center gap-2 rounded-md border border-white/40 px-5 py-3 text-sm font-semibold hover:bg-white/10">
+                {cta.label}
               </Link>
             </div>
           </div>

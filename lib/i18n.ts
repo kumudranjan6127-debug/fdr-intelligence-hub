@@ -24,6 +24,7 @@ const STRINGS = {
   navHome: { en: "Home", hi: "मुखपृष्ठ" },
   navVerify: { en: "Verify a NOC", hi: "एनओसी सत्यापन" },
   navHow: { en: "How it works", hi: "कार्यप्रणाली" },
+  navDemo: { en: "Demo guide", hi: "डेमो गाइड" },
   navResults: { en: "Results", hi: "परिणाम" },
   navRules: { en: "Rules", hi: "नियम" },
   navFaq: { en: "FAQ", hi: "सामान्य प्रश्न" },

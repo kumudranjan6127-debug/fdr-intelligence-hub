@@ -44,7 +44,9 @@ export async function signInAs(formData: FormData) {
   const email = z.string().email().parse(formData.get("email"));
   const user = await db.user.findUniqueOrThrow({ where: { email } });
   await startSession(user.id);
-  redirect(homeFor(user.role));
+  // Optional same-site landing page (the judge's demo guide opens each scenario directly).
+  const next = String(formData.get("next") ?? "");
+  redirect(/^\/(?![/\\])/.test(next) ? next : homeFor(user.role));
 }
 
 /** Email + password. After MAX_FAILED_LOGINS failures the account locks for LOCKOUT_MINUTES. */

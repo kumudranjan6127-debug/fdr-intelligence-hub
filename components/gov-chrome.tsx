@@ -11,12 +11,13 @@ import { cn } from "@/lib/utils";
 // language; a white identity header; a blue menu bar; a prototype disclaimer strip; a full footer.
 // No national emblem or AICTE logo is used: this is a prototype, and the disclaimer says so.
 
-export type NavKey = "home" | "verify" | "how" | "results" | "rules" | "faq" | "signin";
+export type NavKey = "home" | "verify" | "how" | "demo" | "results" | "rules" | "faq" | "signin";
 
 const MENU: { key: NavKey; href: string; label: Parameters<typeof t>[1] }[] = [
   { key: "home", href: "/", label: "navHome" },
   { key: "verify", href: "/verify", label: "navVerify" },
   { key: "how", href: "/#how", label: "navHow" },
+  { key: "demo", href: "/demo", label: "navDemo" },
   { key: "results", href: "/metrics", label: "navResults" },
   { key: "rules", href: "/policy", label: "navRules" },
   { key: "faq", href: "/#faq", label: "navFaq" },
@@ -148,6 +149,7 @@ export function GovFooter({ lang, wide }: { lang: Lang; wide?: boolean }) {
   const links: [string, Parameters<typeof t>[1]][] = [
     ["/", "navHome"],
     ["/verify", "navVerify"],
+    ["/demo", "navDemo"],
     ["/metrics", "navResults"],
     ["/policy", "navRules"],
     ["/#faq", "navFaq"],
