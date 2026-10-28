@@ -32,6 +32,10 @@ Also included:
 - an append-only audit log in which each event's hash covers the previous one (re-verified on `/audit`)
 - a server-side state machine (`lib/transitions.ts`)
 - role checks on every action, and Zod on every input
+- **FDR registry** (`/registry`): every instrument in one table, with a plain-words search read by rules on the portal ("expiring in 90 days above 40 lakh", "matured and not renewed", "lien not marked", states, banks), category chips, sorting, paging and CSV export (`/api/registry`)
+- **Protection gap** on the dashboard: the rupees that do not protect AICTE today (required deposit minus live, bank-checked, issue-free deposits per institution), with the reasons behind it; plus category tiles, a trust ladder, a 12-month maturity calendar and a per-bank table. Institutions see their own coverage meter and an "Action needed" list.
+- **Notifications** (`/notifications`) and a bell in the header: maturity reminders and case updates, in-app only
+- **Judge's demo guide** (`/demo`): each problem-statement scenario signs in as the right person and opens the right screen; a coverage table maps the capability areas to screens
 - government-portal layout (GIGW conventions): a top bar with skip link, text size (A- / A / A+), high contrast and an English / हिंदी switch; a blue menu bar; a prototype disclaimer strip; breadcrumbs; FAQ; and a full footer with the last-updated date. Hindi covers the menus and public pages; officer screens are in English. No national emblem or AICTE logo is used.
 
 ## Measured results

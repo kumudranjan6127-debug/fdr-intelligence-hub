@@ -25,7 +25,7 @@ Verification-first, not a CRUD register:
 
 ## Commands
 - `npx prisma dev start fdr` — start local Postgres (PGlite); then `npm run dev` on port 3000
-- `npm test` (38 vitest tests) · `npm run test:int` · `npm run test:e2e` (set `PW_CHANNEL=chrome` locally) · `npm run eval` · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
+- `npm test` (42 vitest tests) · `npm run test:int` · `npm run test:e2e` (set `PW_CHANNEL=chrome` locally) · `npm run eval` · `npm run typecheck` · `npm run lint` · `npm run db:seed` (wipes and reseeds, ~1.5 min)
 - Local `.env` (gitignored) needs `DATABASE_URL` with `&pgbouncer=true&connection_limit=1` (PGlite shares one connection), plus `DATABASE_URL_UNPOOLED`.
 - On Windows, stop the dev server before `npm run build` or before moving folders (file locks).
 - Playwright helper scripts live in `scratch/` (gitignored): `ui-flows.mjs` drives all 5 demo flows, `shots.mjs` takes screenshots. They use installed Chrome (`channel: "chrome"`).
@@ -49,9 +49,9 @@ An outside review asked for six things. Done so far:
 - Tests: 33 vitest tests. `scratch/ui-flows.mjs` (local) passes all 5 flows; `scratch/auth-check.mjs` checks sign-in.
 
 - **Tests:**
-  - 38 unit tests (including the NOC PDF).
+  - 42 unit tests (including the NOC PDF, the registry search and the protection gap).
   - `npm run test:int`: 11 integration tests (real services + Postgres).
-  - `npm run test:e2e`: 11 Playwright tests (sign-in + the 5 demo flows).
+  - `npm run test:e2e`: 15 Playwright tests (sign-in, the 5 demo flows, registry, notifications, demo guide).
   - Integration and e2e both use `TEST_DATABASE_URL`, are migrated and reseeded per run, and refuse to run if it equals `DATABASE_URL`. Locally that is a second PGlite instance (`npx prisma dev -n fdrtest -d`) on port 51218.
   - GitHub Actions CI (`.github/workflows/ci.yml`) runs lint, typecheck, unit, integration, build and e2e on Postgres 16.
   - Prisma refuses `migrate reset` from an AI agent, so setup uses `migrate deploy` plus the seed. Do not bypass that guard.
@@ -72,4 +72,5 @@ An outside review asked for six things. Done so far:
 - Commit messages: `feat(scope): …`, in small commits. End each with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Money is stored in paise (Decimal or strings); dates are UTC and displayed in IST.
 - Provenance colours: amber = Claimed, blue = Extracted, green = Confirmed, red = Mismatch.
+- Portal pages use `PortalShell` (top bar, header with bell and user menu, role menu bar in `components/portal-nav.tsx`); `PageHeader` is the breadcrumb band. Registry rows come from `lib/registry.ts` via `lib/services/registry.ts`; the protection gap is `lib/protection.ts`.
 - Public pages render inside `GovFrame` (`components/gov-chrome.tsx`); add new English/Hindi strings to `lib/i18n.ts` and read the language with `getLang()` (`lang` cookie). Do not add the national emblem or the AICTE logo.
