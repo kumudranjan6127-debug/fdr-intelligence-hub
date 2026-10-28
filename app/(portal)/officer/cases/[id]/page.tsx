@@ -180,7 +180,7 @@ export default async function CaseReview({ params, searchParams }: { params: Pro
           )}
 
           <Tabs defaultValue={isRelease ? "release" : "verify"} className="gap-4">
-            <TabsList variant="line" className="w-full justify-start gap-4 border-b pb-0">
+            <TabsList variant="line" className="w-full justify-start gap-4 overflow-x-auto overflow-y-hidden border-b pb-0">
               <TabsTrigger value="verify" className="flex-none px-1 pb-2.5">
                 <ShieldCheck aria-hidden /> Verification
                 {discrepancies.length > 0 && <span className="rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-800">{discrepancies.length}</span>}

@@ -3,18 +3,20 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ExternalLink, FilePlus2, FileText, GitBranch, History, Landmark, RefreshCw, ScrollText, ShieldCheck, Upload } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { CaseStatusBadge, InstrumentStatusBadge, MockLabel, RiskBadge, SeverityBadge } from "@/components/badges";
+import { CaseStatusBadge, MockLabel, SeverityBadge } from "@/components/badges";
+import { PassportHero } from "@/components/passport-hero";
 import { ChainTimeline } from "@/components/chain-timeline";
 import { EventLog } from "@/components/event-log";
-import { ProvenanceBar, ProvenanceTable } from "@/components/provenance-table";
+import { ProvenanceTable } from "@/components/provenance-table";
 import { KeyValues, Section } from "@/components/ui-kit";
 import { WhyPendingBox } from "@/components/why-pending";
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { addDocumentAction, applyReleaseAction, caseAction, fetchAAAction } from "@/app/actions";
-import { daysBetween, fmtDate, fmtDateTime, formatINR, humanize, shortHash } from "@/lib/format";
+import { daysBetween, fmtDate, fmtDateTime, humanize, shortHash } from "@/lib/format";
 import { bestEvidence, effectiveValue, normalize } from "@/lib/provenance";
+import { trustOf } from "@/lib/registry";
 import { requirePageUser } from "@/lib/session";
 import { canView, loadInstrument } from "@/lib/views";
 import { cn } from "@/lib/utils";
@@ -46,20 +48,13 @@ export default async function PassportPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader
-        crumbs={[isInstitution ? { label: "My deposits", href: "/institution" } : { label: "Verification queue", href: "/officer" }, { label: ins.code }]}
-        eyebrow={ins.type === "FDR" ? "Fixed Deposit Receipt · lien to AICTE" : "Online deposit to AICTE account"}
+        crumbs={[isInstitution ? { label: "Dashboard", href: "/institution" } : { label: "FDR registry", href: "/registry" }, { label: ins.code }]}
         title={
-          <span className="flex flex-wrap items-center gap-3">
-            FDR Passport <span className="font-mono text-xl text-muted-foreground">{ins.code}</span>
+          <span className="flex flex-wrap items-baseline gap-x-3">
+            FDR Passport <span className="font-mono text-xl text-muted-foreground sm:text-2xl">{ins.code}</span>
           </span>
         }
-        subtitle={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <InstrumentStatusBadge status={ins.status} />
-            <span>{ins.institution.name}</span>
-            {!isInstitution && <RiskBadge score={ins.institution.riskScore} />}
-          </span>
-        }
+        subtitle={ins.institution.name}
         actions={
           <>
             {(isOfficer || user.role === "BANK") &&
@@ -77,32 +72,26 @@ export default async function PassportPage({ params, searchParams }: { params: P
         }
       />
 
-      {/* summary strip */}
-      <div className="card-surface mb-6 grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
-        <div className="p-5">
-          <div className="text-xs font-medium text-muted-foreground">Principal</div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{formatINR(String(effectiveValue(fields.amount)))}</div>
-          <div className="mt-0.5 text-xs text-muted-foreground">Required {formatINR(ins.requiredAmount.toFixed(0))}</div>
-        </div>
-        <div className="p-5">
-          <div className="text-xs font-medium text-muted-foreground">{ins.type === "FDR" ? "Bank · FDR number" : "Bank · transaction ref"}</div>
-          <div className="mt-1 truncate font-medium">{String(effectiveValue(fields.bankName) ?? "—")}</div>
-          <div className="font-mono text-sm text-muted-foreground">{String(effectiveValue(fields.fdrNumber) ?? "—")}</div>
-        </div>
-        <div className="p-5">
-          <div className="text-xs font-medium text-muted-foreground">Maturity</div>
-          <div className="mt-1 font-medium">{fmtDate(mat)}</div>
-          {days !== null && (
-            <div className={cn("text-sm font-medium", days <= 0 ? "text-orange-700" : days <= 90 ? "text-amber-700" : "text-muted-foreground")}>
-              {days <= 0 ? `Matured ${-days} days ago` : `in ${days} days`}
-            </div>
-          )}
-        </div>
-        <div className="p-5">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">Who vouched for it</div>
-          <ProvenanceBar fields={fields} type={ins.type} />
-        </div>
-      </div>
+      <PassportHero
+        type={ins.type}
+        status={ins.status}
+        trust={trustOf(ins.type, fields)}
+        fields={fields}
+        amountPaise={String(effectiveValue(fields.amount) ?? "0")}
+        requiredPaise={ins.requiredAmount.toFixed(0)}
+        bank={String(effectiveValue(fields.bankName) ?? "—")}
+        fdrNumber={String(effectiveValue(fields.fdrNumber) ?? "—")}
+        institution={ins.institution.name}
+        issueDate={normalize("issueDate", bestEvidence(fields.issueDate).value)}
+        maturityDate={mat}
+        daysToMaturity={days}
+        lien={typeof effectiveValue(fields.lienNoted) === "boolean" ? (effectiveValue(fields.lienNoted) as boolean) : null}
+        lienConfirmed={fields.lienNoted.confirmed?.value === true}
+        submittedAt={ins.submittedAt}
+        risk={ins.institution.riskScore}
+        breakdown={ins.institution.riskBreakdown as Parameters<typeof PassportHero>[0]["breakdown"]}
+        showRisk={!isInstitution}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
@@ -136,7 +125,7 @@ export default async function PassportPage({ params, searchParams }: { params: P
           )}
 
           <Tabs defaultValue={["verify", "chain", "docs", "audit"].includes(tab ?? "") ? tab : openDisc.length === 0 && chainIssues > 0 ? "chain" : "verify"} className="gap-4">
-            <TabsList variant="line" className="w-full justify-start gap-4 border-b pb-0">
+            <TabsList variant="line" className="w-full justify-start gap-4 overflow-x-auto overflow-y-hidden border-b pb-0">
               <TabsTrigger value="verify" className="flex-none px-1 pb-2.5">
                 <ShieldCheck aria-hidden /> Verification
                 {openDisc.length > 0 && <span className="rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-800">{openDisc.length}</span>}
