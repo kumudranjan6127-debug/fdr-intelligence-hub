@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { AlertTriangle, Bell, CalendarClock, CheckCircle2, Clock, FileWarning, Hourglass, Inbox, RefreshCw, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, CheckCircle2, Clock, FileWarning, Inbox, RefreshCw, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { RiskBadge, SeverityBadge } from "@/components/badges";
+import { BankTable, CategoryTiles, MaturityChart, ProtectionGapCard, TrustLadder } from "@/components/dashboard-panels";
 import { MaturityJobButton } from "@/components/maturity-job-button";
 import { EmptyState, Section, StatCard } from "@/components/ui-kit";
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { addYears, daysBetween, fmtDate, fmtDateTime, formatLakh, humanize } from "@/lib/format";
 import { bestEvidence, effectiveValue, normalize, tierFieldsOf } from "@/lib/provenance";
+import { protectionGap } from "@/lib/protection";
+import { loadRegistry } from "@/lib/services/registry";
 import { requirePageUser } from "@/lib/session";
 import { getActiveRules, toChainNode } from "@/lib/services/core";
 import { allChains, analyzeChain, buildChain } from "@/lib/chain";
@@ -29,7 +32,8 @@ export default async function Dashboard() {
   const user = await requirePageUser(OFFICER_ROLES);
   const now = new Date();
   const { rules } = await getActiveRules(db);
-  const [instruments, openCases, discrepancies, reminders, institutions] = await Promise.all([
+  const [{ rows: registry }, instruments, openCases, discrepancies, reminders, institutions] = await Promise.all([
+    loadRegistry(db, now),
     db.instrument.findMany({ include: { institution: { select: { id: true, name: true, riskScore: true } }, cases: { select: { type: true, status: true } } } }),
     db.case.findMany({ where: { status: { in: OPEN_CASE_STATUSES } }, select: { id: true, code: true, type: true, status: true, statusChangedAt: true, openedAt: true } }),
     db.discrepancy.groupBy({ by: ["code", "severity"], where: { resolvedAt: null }, _count: true }),
@@ -38,7 +42,6 @@ export default async function Dashboard() {
   ]);
 
   const mat = (i: (typeof instruments)[number]) => normalize("maturityDate", bestEvidence(tierFieldsOf(i).maturityDate).value);
-  const count = (s: string[]) => instruments.filter((i) => s.includes(i.status)).length;
   const held = instruments
     .filter((i) => ["ACTIVE", "EXPIRING", "MATURED", "RELEASE_REQUESTED"].includes(i.status))
     .reduce((s, i) => s + BigInt(String(effectiveValue(tierFieldsOf(i).amount) ?? "0")), 0n);
@@ -73,6 +76,11 @@ export default async function Dashboard() {
   const maxBucket = Math.max(1, ...buckets.map((b) => b.n));
   const overSla = openCases.filter((c) => daysBetween(c.statusChangedAt, now) > rules.caseSlaDays).length;
 
+  const gap = protectionGap(registry);
+  const liveRows = registry.filter((r) => r.status === "ACTIVE" || r.status === "EXPIRING");
+  const checkedPct = liveRows.length ? Math.round((liveRows.filter((r) => r.trust === "CONFIRMED" || r.trust === "SANDBOX").length / liveRows.length) * 100) : 0;
+  const openDisc = discrepancies.reduce((a, d) => a + d._count, 0);
+
   const discByCode = Object.values(
     discrepancies.reduce<Record<string, { code: string; severity: string; n: number }>>((acc, d) => {
       acc[d.code] ??= { code: d.code, severity: d.severity, n: 0 };
@@ -86,19 +94,34 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="Management overview"
+        crumbs={[{ label: "Home", href: "/officer" }, { label: "Dashboard" }]}
         title="Security deposit dashboard"
         subtitle={`${instruments.length} instruments · ${formatLakh(held)} principal held with AICTE · as of ${fmtDateTime(now)}`}
         actions={["RO", "BUREAU", "ADMIN", "AUTHORITY"].includes(user.role) ? <MaturityJobButton /> : null}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6">
-        <StatCard icon={ShieldCheck} label="Active" value={count(["ACTIVE"])} tone="green" />
-        <StatCard icon={Hourglass} label="Expiring ≤ 90 days" value={count(["EXPIRING"])} tone="amber" />
-        <StatCard icon={CalendarClock} label="Matured" value={count(["MATURED"])} tone="orange" hint={`${unclaimed.length} past 10-yr term`} />
-        <StatCard icon={RefreshCw} label="Renewed / replaced" value={count(["RENEWED", "REPLACED"])} tone="slate" />
-        <StatCard icon={Wallet} label="Released" value={count(["RELEASED", "CLOSED"])} tone="violet" />
-        <StatCard icon={Inbox} label="Pending cases" value={openCases.length} tone={overSla ? "red" : "navy"} hint={`${overSla} past ${rules.caseSlaDays}-day SLA`} />
+      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+        <ProtectionGapCard gap={gap} />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <StatCard icon={Inbox} label="Pending cases" value={openCases.length} tone={overSla ? "red" : "navy"} hint={`${overSla} past the ${rules.caseSlaDays}-day SLA`} />
+          <StatCard icon={AlertTriangle} label="Open discrepancies" value={openDisc} tone={openDisc ? "amber" : "green"} hint="On live and pending instruments" />
+          <StatCard icon={ShieldCheck} label="Bank-checked" value={`${checkedPct}%`} tone="green" hint="Of live deposits (sandbox in this prototype)" />
+          <StatCard icon={Wallet} label="Held with AICTE" value={formatLakh(held)} tone="slate" hint={`${unclaimed.length} past the ${rules.termYears}-year term`} />
+        </div>
+      </div>
+
+      <div className="mb-3 mt-8 flex flex-wrap items-end justify-between gap-2">
+        <h2 className="text-lg font-bold tracking-tight text-navy">Deposits by category</h2>
+        <p className="text-xs text-muted-foreground">Select a category to open the matching instruments in the FDR registry</p>
+      </div>
+      <CategoryTiles rows={registry} />
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <TrustLadder rows={registry} />
+        <MaturityChart rows={registry} now={now} />
+      </div>
+      <div className="mt-6">
+        <BankTable rows={registry} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
