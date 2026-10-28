@@ -97,6 +97,22 @@ export function RiskBadge({ score }: { score: number }) {
   );
 }
 
+/** The strongest evidence behind an instrument as a whole (see lib/registry.ts trustOf). */
+export function TrustBadge({ trust }: { trust: "MISMATCH" | "CONFIRMED" | "SANDBOX" | "EXTRACTED" | "CLAIMED" }) {
+  if (trust === "EXTRACTED") return <FieldStatusBadge status="MATCH" />;
+  return <TierBadge tier={trust} />;
+}
+
+export function LienBadge({ lien, confirmed }: { lien: boolean | null; confirmed: boolean }) {
+  if (lien === false) return <span className={cn(pill, "border-red-300 bg-red-50 text-red-900")}>Not marked</span>;
+  if (lien === null) return <span className={cn(pill, "border-slate-300 bg-slate-50 text-slate-600")}>Not on record</span>;
+  return confirmed ? (
+    <span className={cn(pill, "border-emerald-300 bg-emerald-50 text-emerald-900")}>Marked · checked</span>
+  ) : (
+    <span className={cn(pill, "border-amber-300 bg-amber-50 text-amber-900")}>Declared</span>
+  );
+}
+
 export function MockLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1 rounded border border-dashed border-slate-400 bg-slate-50 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">

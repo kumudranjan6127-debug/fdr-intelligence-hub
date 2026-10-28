@@ -441,3 +441,102 @@ describe("NOC PDF", () => {
     expect(sha256Hex(Buffer.from(await render()))).toBe(sha256Hex(Buffer.from(await render())));
   });
 });
+
+describe("FDR registry search", () => {
+  const vocab = { states: ["Maharashtra", "Tamil Nadu", "Uttar Pradesh"], banks: ["Bharat Union Bank", "Ganga Gramin Bank"] };
+  const row = (o: Partial<import("@/lib/registry").RegistryRow> = {}): import("@/lib/registry").RegistryRow => ({
+    id: "i",
+    institutionId: "inst",
+    requiredPaise: BigInt(L(50)),
+    code: "INS-2026-0001",
+    type: "FDR",
+    status: "ACTIVE",
+    institution: "Shivneri Institute of Technology, Pune",
+    state: "Maharashtra",
+    regionalOffice: "Western RO, Mumbai",
+    risk: 10,
+    bank: "Bharat Union Bank",
+    fdrNumber: "BUB123",
+    amountPaise: BigInt(L(50)),
+    issueDate: "2026-01-01",
+    maturityDate: "2026-12-01",
+    daysToMaturity: 40,
+    trust: "SANDBOX",
+    lien: true,
+    lienConfirmed: true,
+    openDiscrepancies: 0,
+    submittedAt: null,
+    ...o,
+  });
+
+  it("reads amounts, maturity windows, states and verification from plain words", async () => {
+    const { parseQuery } = await import("@/lib/registry");
+    const { query, chips } = parseQuery("expiring in 60 days in Tamil Nadu above 50 lakh not bank verified", vocab);
+    expect(query.withinDays).toBe(60);
+    expect(query.minPaise).toBe(BigInt(L(50)));
+    expect(query.states).toEqual(["Tamil Nadu"]);
+    expect(query.verified).toBe(false);
+    expect(query.words).toEqual([]);
+    expect(chips).toContain("State: Tamil Nadu");
+    expect(parseQuery("over 1.5 crore", vocab).query.minPaise).toBe(BigInt(L(150)));
+    expect(parseQuery("Ganga Gramin lien not marked", vocab).query).toMatchObject({ banks: ["Ganga Gramin Bank"], noLien: true });
+  });
+
+  it("filters rows and keeps unknown words as text search", async () => {
+    const { matches, parseQuery } = await import("@/lib/registry");
+    const q = (s: string) => parseQuery(s, vocab).query;
+    expect(matches(row(), q("expiring in 60 days in maharashtra"))).toBe(true);
+    expect(matches(row(), q("expiring in 30 days"))).toBe(false);
+    expect(matches(row(), q("bank verified"))).toBe(true);
+    expect(matches(row({ trust: "CLAIMED" }), q("not verified"))).toBe(true);
+    expect(matches(row(), q("pune"))).toBe(true);
+    expect(matches(row(), q("kanpur"))).toBe(false);
+    expect(matches(row({ lien: false }), q("no lien"))).toBe(true);
+    expect(matches(row({ status: "MATURED", daysToMaturity: -20 }), q("matured and not renewed"))).toBe(true);
+  });
+
+  it("sorts into categories and exports CSV", async () => {
+    const { inCategory, toCsv } = await import("@/lib/registry");
+    expect(inCategory(row(), "expiring")).toBe(true);
+    expect(inCategory(row({ daysToMaturity: 400 }), "active")).toBe(true);
+    expect(inCategory(row({ daysToMaturity: -3 }), "matured")).toBe(true);
+    const csv = toCsv([row({ institution: 'A "quoted", name' })]);
+    expect(csv.split("\r\n")[1]).toContain('"A ""quoted"", name"');
+    expect(csv).toContain("5000000");
+  });
+});
+
+describe("protection gap", () => {
+  it("counts only live, bank-checked, clean deposits as protection and reports the rest", async () => {
+    const { protectionGap } = await import("@/lib/protection");
+    const base = { type: "FDR", institution: "X", state: "S", regionalOffice: "R", risk: 0, bank: "B", fdrNumber: "1", issueDate: null, maturityDate: null, lien: true, lienConfirmed: true, submittedAt: null } as const;
+    const r = (o: Partial<import("@/lib/registry").RegistryRow>): import("@/lib/registry").RegistryRow => ({
+      ...base,
+      id: Math.random().toString(),
+      code: "C",
+      institutionId: "a",
+      requiredPaise: BigInt(L(50)),
+      status: "ACTIVE",
+      amountPaise: BigInt(L(50)),
+      daysToMaturity: 300,
+      trust: "SANDBOX",
+      openDiscrepancies: 0,
+      ...o,
+    });
+    const g = protectionGap([
+      r({}),
+      r({ institutionId: "b", trust: "CLAIMED" }),
+      r({ institutionId: "c", status: "MATURED", daysToMaturity: -10 }),
+      r({ institutionId: "d", amountPaise: BigInt(L(30)), trust: "MISMATCH" }),
+    ]);
+    expect(g.requiredPaise).toBe(BigInt(L(200)));
+    expect(g.protectedPaise).toBe(BigInt(L(50)));
+    expect(g.gapPaise).toBe(BigInt(L(150)));
+    expect(g.underCovered).toBe(3);
+    const by = Object.fromEntries(g.reasons.map((x) => [x.key, x.paise]));
+    expect(by.unchecked).toBe(BigInt(L(50)));
+    expect(by.matured).toBe(BigInt(L(50)));
+    expect(by.flagged).toBe(BigInt(L(30)));
+    expect(by.shortfall).toBe(BigInt(L(70)));
+  });
+});
