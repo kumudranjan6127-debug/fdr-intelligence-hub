@@ -20,7 +20,7 @@ export function Section({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("card-surface", className)}>
+    <section className={cn("card-surface min-w-0", className)}>
       {(title || action) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-3.5">
           <div className="min-w-0">

@@ -1,6 +1,6 @@
 import { AlertTriangle, BadgeCheck, CircleDashed, Plug, Scale, Table2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { PageHeader, PublicShell } from "@/components/app-shell";
+import { PublicShell } from "@/components/app-shell";
 import { Section } from "@/components/ui-kit";
 import { db } from "@/lib/db";
 import { getActiveRules } from "@/lib/services/core";
@@ -23,12 +23,16 @@ export default async function PolicyPage() {
   const counts = RULE_REGISTER.reduce<Record<string, number>>((a, r) => ({ ...a, [r.status]: (a[r.status] ?? 0) + 1 }), {});
 
   return (
-    <PublicShell user={user} wide>
-      <PageHeader
-        eyebrow="Policy engine"
-        title="Rule register"
-        subtitle={`Every rule the engine applies, the clause it comes from, and whether it was checked against the source · ${POLICY_EFFECTIVE} · checked ${POLICY_CHECKED_ON} · active rule set ${version}`}
-      />
+    <PublicShell
+      user={user}
+      wide
+      active="rules"
+      band={{
+        crumbs: [{ label: "Home", href: "/" }, { label: "Rule register" }],
+        title: "Rule register",
+        subtitle: `Every rule the engine applies, the clause it comes from, and whether it was checked against the source · ${POLICY_EFFECTIVE} · checked ${POLICY_CHECKED_ON} · active rule set ${version}`,
+      }}
+    >
 
       <div className="mb-6 flex flex-wrap gap-2 text-xs">
         {(Object.keys(STATUS) as RuleStatus[]).map((s) => (

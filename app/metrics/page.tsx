@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, Clock, FileSearch, ScanSearch, ShieldCheck, Workflow } from "lucide-react";
-import { PageHeader, PublicShell } from "@/components/app-shell";
+import { PublicShell } from "@/components/app-shell";
 import { EmptyState, Section, StatCard } from "@/components/ui-kit";
 import { currentUser } from "@/lib/session";
 import results from "@/eval/results.json";
@@ -37,12 +37,16 @@ export default async function MetricsPage() {
   const defects = results.detection.byLabel.filter((b): b is (typeof b & { expected: string; detected: number; recall: number }) => "expected" in b);
 
   return (
-    <PublicShell user={user} wide>
-      <PageHeader
-        eyebrow="Evaluation"
-        title="Measured results"
-        subtitle={`${results.cases} labelled cases from seed ${results.seed} · code at commit ${results.commit} · run ${new Date(results.generatedAt).toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })}`}
-      />
+    <PublicShell
+      user={user}
+      wide
+      active="results"
+      band={{
+        crumbs: [{ label: "Home", href: "/" }, { label: "Measured results" }],
+        title: "Measured results",
+        subtitle: `${results.cases} labelled cases from seed ${results.seed} · code at commit ${results.commit} · run ${new Date(results.generatedAt).toLocaleDateString("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" })}`,
+      }}
+    >
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard icon={ScanSearch} label="Planted defects caught" value={`${o.recall}%`} hint={`${o.detected} of ${o.defectiveCases}`} tone="green" />

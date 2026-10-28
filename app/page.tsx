@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Building2,
   CheckCircle2,
+  ChevronDown,
   Clock,
   FileSearch,
   Fingerprint,
@@ -23,6 +24,11 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TierBadge } from "@/components/badges";
+import { GovFrame } from "@/components/gov-chrome";
+import { demoPassword, isDemoMode } from "@/lib/auth";
+import { fmtDate } from "@/lib/format";
+import { FAQ, t, type Lang } from "@/lib/i18n";
+import { getLang } from "@/lib/lang";
 import { db } from "@/lib/db";
 import { currentUser, homeFor } from "@/lib/session";
 
@@ -63,6 +69,14 @@ const HONEST: string[] = [
   "Demo mode adds one-click sign-in for the demo accounts (still a signed session). All institutions, banks, people and documents are fictional and stamped SPECIMEN.",
 ];
 
+const DEMO_ROLES: [string, string][] = [
+  ["Institution", "Rakesh Tiwari"],
+  ["AICTE officer", "Arjun Mehta"],
+  ["Legal cell", "Rohini Kulkarni"],
+  ["Competent Authority", "Dr. S. Raghavan"],
+  ["Bank", "Suresh Iyer"],
+];
+
 const ROADMAP: [string, string][] = [
   ["P2", "Real authentication and full RO, cell and authority workflows"],
   ["P3", "EVM ledger anchoring for NOCs and revocations"],
@@ -74,7 +88,7 @@ const ROADMAP: [string, string][] = [
   ["P10", "Metrics: planted defects caught, turnaround with vs without AA"],
 ];
 
-async function liveStats() {
+async function liveStats(lang: Lang) {
   try {
     const [instruments, institutions, discrepancies, nocs, events] = await Promise.all([
       db.instrument.count(),
@@ -84,11 +98,11 @@ async function liveStats() {
       db.event.count(),
     ]);
     return [
-      { value: instruments, label: "deposits tracked" },
-      { value: institutions, label: "institutions" },
-      { value: discrepancies, label: "open discrepancies flagged" },
-      { value: nocs, label: "NOCs verifiable by QR" },
-      { value: events, label: "hash-chained audit events" },
+      { value: instruments, label: t(lang, "statDeposits") },
+      { value: institutions, label: t(lang, "statInstitutions") },
+      { value: discrepancies, label: t(lang, "statDiscrepancies") },
+      { value: nocs, label: t(lang, "statNocs") },
+      { value: events, label: t(lang, "statEvents") },
     ];
   } catch {
     return null;
@@ -96,72 +110,47 @@ async function liveStats() {
 }
 
 export default async function Landing() {
-  const [user, stats] = await Promise.all([currentUser(), liveStats()]);
-  const cta = user ? { href: homeFor(user.role), label: "Open my workspace", short: "Workspace" } : { href: "/login", label: "Try the live demo", short: "Live demo" };
+  const [user, lang] = await Promise.all([currentUser(), getLang()]);
+  const stats = await liveStats(lang);
+  const demo = isDemoMode();
+  const cta = user ? { href: homeFor(user.role), label: t(lang, "openWorkspace") } : { href: "/login", label: t(lang, "tryDemo") };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="tricolor h-1 w-full" aria-hidden />
-
-      <header className="sticky top-0 z-30 border-b bg-card/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy text-[11px] font-bold tracking-tight text-white shadow-sm">FDR</span>
-            <span className="leading-tight">
-              <span className="block whitespace-nowrap text-[15px] font-semibold tracking-tight">FDR Intelligence Hub</span>
-              <span className="block text-[11px] text-muted-foreground">AICTE · Security Deposits</span>
-            </span>
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#features" className="hover:text-foreground">Features</a>
-            <a href="#how" className="hover:text-foreground">How it works</a>
-            <a href="#honest" className="hover:text-foreground">Honest boundaries</a>
-            <Link href="/metrics" className="hover:text-foreground">Results</Link>
-            <Link href="/policy" className="hover:text-foreground">Rules</Link>
-            <Link href="/verify" className="hover:text-foreground">Verify a NOC</Link>
-          </nav>
-          <Link href={cta.href} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            <span className="sm:hidden">{cta.short}</span>
-            <span className="hidden sm:inline">{cta.label}</span>
-            <ArrowRight className="size-4" aria-hidden />
-          </Link>
-        </div>
-      </header>
-
+    <GovFrame user={user} active="home">
       {/* hero */}
-      <section className="relative overflow-hidden bg-navy text-white">
-        <div aria-hidden className="pointer-events-none absolute -right-32 -top-32 size-120 rounded-full bg-white/5" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 size-96 rounded-full bg-white/5" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-28 pt-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pb-36 lg:pt-20">
+      <section className="relative overflow-hidden border-b bg-linear-to-b from-navy-soft to-background">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-28 pt-12 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pb-32 lg:pt-16">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80">
-              <span className="size-1.5 rounded-full bg-saffron" aria-hidden />
-              Smart India Hackathon 2026 · SIH26265 · AICTE
-            </span>
-            <h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              Security deposits, <span className="text-saffron">verified</span>, not just recorded.
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-saffron-deep">{t(lang, "heroEyebrow")}</div>
+            <h1 className="mt-4 text-4xl font-bold leading-[1.1] tracking-tight text-navy sm:text-5xl">
+              {t(lang, "heroTitleA")} <span className="text-gov-blue">{t(lang, "heroTitleB")}</span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
-              Technical institutions keep a security deposit with AICTE for 10 years. This portal shows who vouched for every field, checks every renewal chain automatically, and makes every
-              lien-release NOC verifiable with one QR scan.
-            </p>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-foreground/80 sm:text-lg">{t(lang, "heroBody")}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={cta.href} className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-navy shadow-sm hover:bg-white/90">
+              <Link href={cta.href} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
                 {cta.label}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
-              <Link href="/verify" className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+              <Link href="/verify" className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-card px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/5">
                 <QrCode className="size-4" aria-hidden />
-                Verify a NOC
+                {t(lang, "navVerify")}
               </Link>
             </div>
-            <p className="mt-4 text-xs text-white/55">One-click demo accounts · fictional data · Mock AA sandbox</p>
+            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/75">
+              {["Three-tier verification", "Renewal chain X-ray", "QR-verifiable NOC"].map((x) => (
+                <li key={x} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-india-green" aria-hidden />
+                  {x}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs text-muted-foreground">{t(lang, "heroNote")}</p>
           </div>
 
           {/* product preview */}
           <div className="relative">
-            <div aria-hidden className="absolute -inset-4 rounded-3xl bg-saffron/10 blur-2xl" />
-            <div className="relative rounded-2xl border border-white/10 bg-card p-5 text-foreground shadow-2xl">
+            <div aria-hidden className="absolute -inset-3 rotate-2 rounded-3xl bg-gov-blue/10" />
+            <div className="relative rounded-2xl border bg-card p-5 text-foreground shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">New submission · FDR</div>
@@ -239,7 +228,7 @@ export default async function Landing() {
               </div>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">Live from the demo database · all data fictional</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">{t(lang, "liveFrom")} · {fmtDate(new Date())}</p>
         </section>
       )}
 
@@ -247,8 +236,8 @@ export default async function Landing() {
       <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <Eyebrow>The problem</Eyebrow>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Ten years, many renewals, and no single source of truth.</h2>
+            <Eyebrow>{t(lang, "secProblem")}</Eyebrow>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{t(lang, "secProblemTitle")}</h2>
             <ul className="mt-8 space-y-5">
               {[
                 ["A deposit outlives its paperwork", "Over a decade an FDR is renewed, replaced and topped up. Each event is a new instrument that needs a fresh lien, and nothing links the chain."],
@@ -292,11 +281,11 @@ export default async function Landing() {
       </section>
 
       {/* signature features */}
-      <section id="features" className="scroll-mt-20 border-y bg-card">
+      <section id="features" className="scroll-mt-6 border-y bg-card">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-2xl">
-            <Eyebrow>What makes it different</Eyebrow>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Verification first. Not another register.</h2>
+            <Eyebrow>{t(lang, "secFeatures")}</Eyebrow>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{t(lang, "secFeaturesTitle")}</h2>
             <p className="mt-4 text-muted-foreground">Three ideas carry the design. Everything else supports them.</p>
           </div>
 
@@ -365,10 +354,10 @@ export default async function Landing() {
       </section>
 
       {/* how it works */}
-      <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6 lg:py-28">
+      <section id="how" className="mx-auto max-w-6xl scroll-mt-6 px-4 py-20 sm:px-6 lg:py-28">
         <div className="max-w-2xl">
-          <Eyebrow>How it works</Eyebrow>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">From submission to a NOC anyone can check.</h2>
+          <Eyebrow>{t(lang, "secHow")}</Eyebrow>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{t(lang, "secHowTitle")}</h2>
         </div>
         <ol className="mt-12 grid gap-4 md:grid-cols-5">
           {STEPS.map((s, i) => (
@@ -403,11 +392,11 @@ export default async function Landing() {
       </section>
 
       {/* honest boundaries + roadmap */}
-      <section id="honest" className="scroll-mt-20 border-t bg-card">
+      <section id="honest" className="scroll-mt-6 border-t bg-card">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:py-28">
           <div>
-            <Eyebrow>Honest boundaries</Eyebrow>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">What is real, and what is a sandbox.</h2>
+            <Eyebrow>{t(lang, "secHonest")}</Eyebrow>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight">{t(lang, "secHonestTitle")}</h2>
             <p className="mt-4 text-muted-foreground">
               A prototype should say where it stops. The portal labels each of these in the interface too, and a reproducible evaluation reports what the engines actually catch:{" "}
               <Link href="/metrics" className="font-medium text-primary hover:underline">
@@ -425,8 +414,8 @@ export default async function Landing() {
             </ul>
           </div>
           <div>
-            <Eyebrow>Roadmap</Eyebrow>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">Built to grow into production.</h2>
+            <Eyebrow>{t(lang, "secRoadmap")}</Eyebrow>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight">{t(lang, "secRoadmapTitle")}</h2>
             <ul className="mt-8 divide-y rounded-xl border bg-background">
               {ROADMAP.map(([p, t]) => (
                 <li key={p} className="flex items-center gap-4 px-4 py-3">
@@ -439,33 +428,61 @@ export default async function Landing() {
         </div>
       </section>
 
-      {/* final call to action */}
-      <section className="relative overflow-hidden bg-navy text-white">
-        <div aria-hidden className="pointer-events-none absolute -right-20 -top-28 size-96 rounded-full bg-white/5" />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:py-20">
+      {/* for judges */}
+      <section className="bg-gov-blue text-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:py-16">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">See it work in five minutes.</h2>
-            <p className="mt-3 max-w-xl text-white/70">Sign in as an institution, an AICTE officer or a bank. Submit a deposit, catch a mismatch, issue a NOC and try to tamper with it.</p>
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-saffron">{t(lang, "secJudges")}</div>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">{t(lang, "secJudgesTitle")}</h2>
+            <p className="mt-3 max-w-xl text-white/80">{t(lang, "secJudgesBody")}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={cta.href} className="inline-flex items-center gap-2 rounded-md bg-saffron px-5 py-3 text-sm font-semibold text-navy hover:bg-saffron/90">
+                {cta.label}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+              <Link href="/verify" className="inline-flex items-center gap-2 rounded-md border border-white/40 px-5 py-3 text-sm font-semibold hover:bg-white/10">
+                {t(lang, "navVerify")}
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href={cta.href} className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-navy hover:bg-white/90">
-              {cta.label}
-              <ArrowRight className="size-4" aria-hidden />
-            </Link>
-            <Link href="/verify" className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-5 py-3 text-sm font-semibold hover:bg-white/10">
-              Verify a NOC
-            </Link>
-          </div>
+          {demo && (
+            <div className="rounded-xl border border-white/20 bg-white/10 p-5">
+              <div className="text-xs font-semibold uppercase tracking-wider text-white/70">Demo accounts</div>
+              <ul className="mt-3 divide-y divide-white/15 text-sm">
+                {DEMO_ROLES.map(([role, who]) => (
+                  <li key={role} className="flex items-center justify-between gap-3 py-2">
+                    <span className="text-white/80">{role}</span>
+                    <span className="font-medium">{who}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-white/75">
+                {t(lang, "demoPassword")}: <code className="rounded bg-white/15 px-1.5 py-0.5 font-mono text-white">{demoPassword()}</code>
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      <footer className="border-t bg-background">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs leading-relaxed text-muted-foreground sm:px-6 md:flex-row md:items-center md:justify-between">
-          <span>Smart India Hackathon 2026 · SIH26265 · Streamline of Security Deposit / FDR Portal</span>
-          <span>Prototype · fictional data · Mock AA sandbox · hashes anchored in DB (ledger in Phase 3)</span>
+      {/* FAQ */}
+      <section id="faq" className="mx-auto w-full max-w-3xl scroll-mt-6 px-4 py-16 sm:px-6 lg:py-20">
+        <div className="text-center">
+          <Eyebrow>{t(lang, "secFaq")}</Eyebrow>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-navy">{t(lang, "secFaqTitle")}</h2>
         </div>
-      </footer>
-    </div>
+        <div className="mt-8 space-y-3">
+          {FAQ.map((f, i) => (
+            <details key={i} className="group card-surface" open={i === 0}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-semibold [&::-webkit-details-marker]:hidden">
+                {f.q[lang]}
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground transition group-open:rotate-180" aria-hidden />
+              </summary>
+              <p className="border-t px-5 py-4 text-sm leading-relaxed text-muted-foreground">{f.a[lang]}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+    </GovFrame>
   );
 }
 

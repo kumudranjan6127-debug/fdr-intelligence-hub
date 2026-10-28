@@ -20,7 +20,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
 
   if (!v.found || !v.noc) {
     return (
-      <PublicShell user={user}>
+      <PublicShell user={user} active="verify">
         <div className="mx-auto max-w-xl rounded-2xl border border-red-300 bg-red-50 p-6 text-center">
           <XCircle className="mx-auto size-8 text-red-700" aria-hidden />
           <h1 className="mt-2 text-lg font-semibold">No NOC with code “{code}”</h1>
@@ -46,7 +46,7 @@ export default async function VerifyNoc({ params }: { params: Promise<{ code: st
   }[verdict];
 
   return (
-    <PublicShell user={user}>
+    <PublicShell user={user} active="verify">
       <div className="mx-auto max-w-3xl space-y-5">
         <div className={cn("flex items-start gap-3 rounded-2xl border p-5", banner.cls)} role="status">
           <banner.Icon className="mt-0.5 size-7 shrink-0" aria-hidden />
